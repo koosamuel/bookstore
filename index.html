@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#08765f" />
+    <meta name="description" content="어린이의 원고와 그림을 존중하고 보호자 검토를 거쳐 공개하는 안전한 어린이 작가 온라인 서점" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="현우 MJ 어린이 작가 서점" />
+    <meta property="og:description" content="어린이의 원고와 그림을 존중하는 안전한 온라인 서점" />
+    <meta property="og:url" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/" />
+    <meta property="og:image" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/assets/web/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="현우 MJ 어린이 작가 서점" />
+    <meta name="twitter:description" content="어린이의 원고와 그림을 존중하는 안전한 온라인 서점" />
+    <meta name="twitter:image" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/assets/web/og.png" />
+    <link rel="canonical" href="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css?v=16" />
+    <title>빙고서점</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="빙고서점 홈">
+        <img src="./assets/school-logo.png" alt="서울서빙고초등학교" />
+      </a>
+      <div class="header-actions">
+        <span class="sync-status" id="syncStatus" aria-live="polite">연결 중…</span>
+        <button class="fullscreen-button" id="fullscreenButton" type="button" aria-label="전체화면으로 전환">전체화면</button>
+        <button class="manage-button" id="manageButton" type="button" aria-label="운영자 로그인 또는 대여 관리 열기">운영자 로그인</button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero hero-compact">
+        <div>
+          <h1>빙고서점</h1>
+          <p>우리 학교 어린이 작가들의 책</p>
+        </div>
+        <div class="hero-banner" id="heroBanner" aria-label="학교 소식 배너">
+          <article class="hero-slide event-slide active" data-hero-slide>
+            <span class="hero-slide-label">학교 행사</span>
+            <strong>가을 운동회</strong>
+            <time datetime="2026-10-15">10월 15일</time>
+            <span class="hero-slide-art" aria-hidden="true">🏃‍♀️🏃‍♂️</span>
+          </article>
+          <article class="hero-slide bookstore-slide" data-hero-slide aria-hidden="true">
+            <span class="hero-slide-label">어린이 작가</span>
+            <strong>새로운 이야기를 만나 보세요</strong>
+            <span class="hero-slide-art" aria-hidden="true">📚✨</span>
+          </article>
+          <div class="hero-dots" aria-hidden="true"><i class="active"></i><i></i></div>
+        </div>
+      </section>
+
+      <section class="ranking-section" aria-labelledby="rankingTitle">
+        <div class="ranking-head">
+          <div>
+            <p class="eyebrow">SAFE ENGAGEMENT · 안전한 독서 반응</p>
+            <h2 id="rankingTitle">많이 읽은 책</h2>
+            <p>고유 조회와 완독을 기준으로 집계하며 어린이 작가 개인 순위는 만들지 않습니다.</p>
+          </div>
+          <span class="ranking-mode" id="engagementMode">집계 준비 중</span>
+        </div>
+        <div class="ranking-list" id="rankingList" aria-live="polite"></div>
+      </section>
+
+      <section class="catalog" aria-labelledby="catalogTitle">
+        <div class="section-heading">
+          <div><p class="eyebrow">SYNTHETIC DATA · 가상 자료</p><h2 id="catalogTitle">가상 샘플 도서</h2><p class="section-description">화면·검색·대여 기능을 시험하기 위해 만든 가상의 제목과 필명입니다. 실제 어린이의 정보가 아닙니다.</p></div>
+          <p id="bookCount" aria-live="polite"></p>
+        </div>
+        <div class="controls">
+          <label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="책 제목이나 작가를 찾아보세요" /></label>
+          <div class="filters" role="group" aria-label="대여 상태 필터">
+            <button class="filter active" data-filter="all" type="button">전체</button>
+            <button class="filter" data-filter="available" type="button">대여 가능</button>
+            <button class="filter" data-filter="borrowed" type="button">대여 중</button>
+          </div>
+        </div>
+        <div class="book-grid" id="bookGrid"></div>
+        <div class="empty-state" id="emptyState" hidden><span>🔍</span><h3>찾는 책이 없어요</h3><p>다른 검색어를 입력해 보세요.</p></div>
+      </section>
+    </main>
+
+    <dialog id="bookDialog" class="book-dialog"><div id="bookDialogContent"></div></dialog>
+    <dialog id="manageDialog" class="manage-dialog">
+      <div class="dialog-head"><div><p class="eyebrow">LIBRARY DESK</p><h2>관리자 모드</h2></div><button class="icon-button" data-close="manageDialog" aria-label="닫기">×</button></div>
+      <section class="admin-section" aria-labelledby="addBookTitle">
+        <h3 id="addBookTitle">새 책 추가</h3>
+        <form id="addBookForm" class="add-book-form">
+          <label class="field">승인된 공개용 책 사진 <small>개인정보가 없는 표지만 등록하세요.</small><input id="bookCover" type="file" accept="image/jpeg,image/png,image/webp" required /></label>
+          <label class="field">책 이름<input id="bookTitle" type="text" maxlength="100" required /></label>
+          <label class="field">작가<input id="bookAuthor" type="text" maxlength="100" required /></label>
+          <p class="form-error" id="addBookError" role="alert"></p>
+          <button class="primary-button" id="addBookButton" type="submit">책 추가하기</button>
+        </form>
+      </section>
+      <section class="admin-section" aria-labelledby="loanTitle">
+        <h3 id="loanTitle">대여 중인 책</h3>
+        <p class="dialog-description">반납된 책의 상태를 다시 ‘대여 가능’으로 바꿀 수 있어요.</p>
+      </section>
+      <div id="borrowedList" class="borrowed-list"></div>
+      <button class="secondary-button" id="resetAllButton" type="button">모든 대여 상태 초기화</button>
+      <section class="admin-section" aria-labelledby="bookAdminTitle">
+        <h3 id="bookAdminTitle">등록된 책 관리</h3>
+        <div id="bookAdminList" class="borrowed-list"></div>
+      </section>
+      <section class="admin-section" aria-labelledby="commentAdminTitle">
+        <h3 id="commentAdminTitle">댓글 검토</h3>
+        <p class="dialog-description">댓글은 승인 전까지 공개되지 않습니다. 개인정보·외부 링크·괴롭힘 표현을 확인하세요.</p>
+        <div id="commentAdminList" class="borrowed-list"></div>
+      </section>
+      <button class="text-button" id="logoutButton" type="button">운영자 로그아웃</button>
+    </dialog>
+
+    <dialog id="editBookDialog" class="edit-book-dialog">
+      <form id="editBookForm">
+        <div class="dialog-head"><div><p class="eyebrow">BOOK EDITOR</p><h2>책 정보 수정</h2></div><button class="icon-button" type="button" data-close="editBookDialog" aria-label="닫기">×</button></div>
+        <input id="editBookId" type="hidden" />
+        <label class="field">책 번호 <small>번호가 작은 책부터 앞에 표시됩니다.</small><input id="editBookNumber" type="text" inputmode="numeric" maxlength="12" placeholder="예: B004" required /></label>
+        <label class="field">새 책 사진 <small>사진을 바꾸지 않으려면 선택하지 마세요.</small><input id="editBookCover" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+        <label class="field">책 이름<input id="editBookTitle" type="text" maxlength="100" required /></label>
+        <label class="field">작가<input id="editBookAuthor" type="text" maxlength="100" required /></label>
+        <p class="form-error" id="editBookError" role="alert"></p>
+        <button class="primary-button" id="editBookButton" type="submit">수정 내용 저장</button>
+      </form>
+    </dialog>
+
+    <dialog id="workflowDialog" class="workflow-dialog">
+      <div class="dialog-head">
+        <div><p class="eyebrow">CHILD PUBLISHING</p><h2 id="workflowTitle">작품 출판 작업</h2></div>
+        <button class="icon-button" type="button" data-close="workflowDialog" aria-label="닫기">×</button>
+      </div>
+      <p class="dialog-description" id="workflowStatus">작품 정보를 불러오는 중입니다.</p>
+      <input id="workflowBookId" type="hidden" />
+
+      <nav class="workflow-tabs" aria-label="작품 처리 단계">
+        <button class="workflow-tab active" type="button" data-workflow-tab="metadata">기본 정보</button>
+        <button class="workflow-tab" type="button" data-workflow-tab="episodes">에피소드</button>
+        <button class="workflow-tab" type="button" data-workflow-tab="agent">AI 작업실</button>
+        <button class="workflow-tab" type="button" data-workflow-tab="review">검토·승인</button>
+      </nav>
+
+      <section class="workflow-panel active" data-workflow-panel="metadata">
+        <form id="publishingForm" class="workflow-form">
+          <label class="field">장르<input id="publishingGenre" type="text" maxlength="80" /></label>
+          <label class="field">권장 학년<input id="publishingGrade" type="text" maxlength="40" /></label>
+          <label class="field full">책 소개<textarea id="publishingDescription" rows="4" maxlength="1000"></textarea></label>
+          <label class="field full">키워드 <small>쉼표로 구분합니다.</small><input id="publishingKeywords" type="text" maxlength="300" /></label>
+          <label class="field full">콘텐츠 안내<textarea id="publishingNotice" rows="3" maxlength="500"></textarea></label>
+          <label class="field">전체 페이지 수<input id="publishingPageCount" type="number" min="0" max="1000" /></label>
+          <label class="field">보호자 동의
+            <select id="guardianConsent"><option value="unconfirmed">미확인</option><option value="review">검토 중</option><option value="approved">승인</option><option value="rejected">거절</option></select>
+          </label>
+          <p class="form-error full" id="publishingError" role="alert"></p>
+          <button class="primary-button full" type="submit">기본 정보 저장</button>
+        </form>
+      </section>
+
+      <section class="workflow-panel" data-workflow-panel="episodes" hidden>
+        <form id="episodeForm" class="workflow-form compact-form">
+          <label class="field">회차<input id="episodeNumber" type="number" min="1" required /></label>
+          <label class="field">제목<input id="episodeTitle" type="text" maxlength="120" required /></label>
+          <label class="field">시작 페이지<input id="episodeStart" type="number" min="1" required /></label>
+          <label class="field">종료 페이지<input id="episodeEnd" type="number" min="1" required /></label>
+          <label class="field">예상 컷 수<input id="episodePanels" type="number" min="0" value="0" /></label>
+          <label class="field">상태<select id="episodeStatus"><option value="draft">초안</option><option value="review">검토 중</option><option value="approved">승인</option><option value="published">공개</option></select></label>
+          <p class="form-error full" id="episodeError" role="alert"></p>
+          <button class="primary-button full" type="submit">에피소드 추가</button>
+        </form>
+        <div id="episodeList" class="workflow-list"></div>
+      </section>
+
+      <section class="workflow-panel" data-workflow-panel="agent" hidden>
+        <form id="agentForm" class="workflow-form">
+          <label class="field">Agent
+            <select id="agentType"><option value="editing">편집</option><option value="summary">출판·요약</option><option value="safety">안전 검토</option><option value="promotion">홍보</option><option value="translation">영어 번역</option></select>
+          </label>
+          <label class="field">에피소드<select id="agentEpisode"><option value="">작품 전체</option></select></label>
+          <label class="field full">확인된 원문<textarea id="agentInput" rows="8" required placeholder="OCR 결과를 사람이 확인한 뒤 입력하세요."></textarea></label>
+          <p class="form-error full" id="agentError" role="alert"></p>
+          <button class="primary-button full" id="agentButton" type="submit">AI 초안 생성</button>
+        </form>
+        <div id="suggestionList" class="workflow-list"></div>
+      </section>
+
+      <section class="workflow-panel" data-workflow-panel="review" hidden>
+        <div class="review-grid" id="reviewGrid"></div>
+        <label class="field">검토 의견<textarea id="reviewNotes" rows="3" maxlength="500"></textarea></label>
+        <div class="publish-actions">
+          <button class="secondary-button" id="requestChangesButton" type="button">수정 요청</button>
+          <button class="primary-button" id="publishBookButton" type="button">승인 후 공개</button>
+        </div>
+        <p class="form-error" id="reviewError" role="alert"></p>
+      </section>
+    </dialog>
+
+    <dialog id="loginDialog" class="login-dialog">
+      <form id="loginForm">
+        <div class="dialog-head"><div><p class="eyebrow">OPERATOR</p><h2>운영자 로그인</h2></div><button class="icon-button" type="button" data-close="loginDialog" aria-label="닫기">×</button></div>
+        <p class="dialog-description">관리자 비밀번호 6자리를 입력하세요.</p>
+        <label class="field">관리자 비밀번호<input id="loginPassword" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required /></label>
+        <p class="form-error" id="loginError" role="alert"></p>
+        <button class="primary-button" id="loginButton" type="submit">관리자 모드 열기</button>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="./app.js?v=16" defer></script>
+  </body>
+</html>

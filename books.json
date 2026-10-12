@@ -1,0 +1,8 @@
+[
+  { "id":"B001", "data_origin":"synthetic", "title":"구름 위의 비밀 도서관", "author":"구름이 (가상 페르소나)", "grade":"1~3학년", "description":"황금 열쇠를 발견한 구름 아이가 하늘 도서관의 책을 지키는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/cloud-library/cover.jpg", "emoji":"☁️", "color":"#dcefff" },
+  { "id":"B002", "data_origin":"synthetic", "title":"용감한 민들레", "author":"별콩 (가상 페르소나)", "grade":"1~3학년", "description":"작은 민들레 씨앗이 낯선 바람과 비를 지나 새로운 들판에서 다시 꽃을 피우는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/brave-dandelion/cover.jpg", "emoji":"🌼", "color":"#fff0b8" },
+  { "id":"B003", "data_origin":"synthetic", "title":"우리 반 우주 탐험대", "author":"별나래 (가상 페르소나)", "grade":"3~6학년", "description":"토끼·곰·여우 친구들이 상자 우주선을 타고 별길을 탐험하는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/class-space-team/cover.jpg", "emoji":"🚀", "color":"#e5ddff" },
+  { "id":"B004", "data_origin":"synthetic", "title":"고양이 탐정의 하루", "author":"호두 (가상 페르소나)", "grade":"전 학년", "description":"주황 고양이 탐정이 사라진 파란 색연필의 흔적을 찾아가는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/cat-detective/cover.jpg", "emoji":"🐈", "color":"#ffe0d6" },
+  { "id":"B005", "data_origin":"synthetic", "title":"바다를 지키는 작은 손", "author":"파랑 (가상 페르소나)", "grade":"2~6학년", "description":"아기 고래와 바다거북 친구들이 산호초를 깨끗하게 만드는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/little-hands-ocean/cover.jpg", "emoji":"🐳", "color":"#d9f5f2" },
+  { "id":"B006", "data_origin":"synthetic", "title":"내 마음의 무지개", "author":"무지개콩 (가상 페르소나)", "grade":"전 학년", "description":"파란 빗방울이 여러 감정을 만나 마음속 무지개를 발견하는 AI 생성 가상 그림책입니다.", "cover_url":"./assets/web/synthetic/heart-rainbow/cover.jpg", "emoji":"🌈", "color":"#f8e0f1" }
+]
