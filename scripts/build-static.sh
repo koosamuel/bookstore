@@ -10,13 +10,17 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-for file in index.html styles.css app.js books.json manifest.webmanifest sw.js; do
+for file in index.html styles.css app.js agent-demo.js server-api.js demo.html demo.css demo.js books.json manifest.webmanifest sw.js; do
   cp "$PROJECT_DIR/$file" "$STAGING_DIR/$file"
 done
 
 mkdir -p "$STAGING_DIR/assets"
 cp "$PROJECT_DIR/assets/school-logo.png" "$STAGING_DIR/assets/school-logo.png"
 cp -R "$PROJECT_DIR/assets/web" "$STAGING_DIR/assets/web"
+if [ -f "$PROJECT_DIR/.openai/hosting.json" ]; then
+  mkdir -p "$STAGING_DIR/.openai"
+  cp "$PROJECT_DIR/.openai/hosting.json" "$STAGING_DIR/.openai/hosting.json"
+fi
 
 rm -rf "$OUTPUT_DIR"
 mv "$STAGING_DIR" "$OUTPUT_DIR"

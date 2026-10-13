@@ -8,78 +8,130 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="현우 MJ 어린이 작가 서점" />
     <meta property="og:description" content="어린이의 원고와 그림을 존중하는 안전한 온라인 서점" />
-    <meta property="og:url" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/" />
-    <meta property="og:image" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/assets/web/og.png" />
+    <meta property="og:url" content="https://koosamuel.github.io/bookstore/" />
+    <meta property="og:image" content="https://koosamuel.github.io/bookstore/assets/web/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="현우 MJ 어린이 작가 서점" />
     <meta name="twitter:description" content="어린이의 원고와 그림을 존중하는 안전한 온라인 서점" />
-    <meta name="twitter:image" content="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/assets/web/og.png" />
-    <link rel="canonical" href="https://hyunwoo-mj-bookstore.bold-civet-5533.chatgpt.site/" />
+    <meta name="twitter:image" content="https://koosamuel.github.io/bookstore/assets/web/og.png" />
+    <link rel="canonical" href="https://koosamuel.github.io/bookstore/" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=16" />
+    <link rel="stylesheet" href="./styles.css?v=27" />
     <title>빙고서점</title>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="빙고서점 홈">
-        <img src="./assets/school-logo.png" alt="서울서빙고초등학교" />
-      </a>
       <div class="header-actions">
         <span class="sync-status" id="syncStatus" aria-live="polite">연결 중…</span>
         <button class="fullscreen-button" id="fullscreenButton" type="button" aria-label="전체화면으로 전환">전체화면</button>
-        <button class="manage-button" id="manageButton" type="button" aria-label="운영자 로그인 또는 대여 관리 열기">운영자 로그인</button>
       </div>
     </header>
 
+    <nav class="primary-tabs" aria-label="주요 화면" role="tablist">
+      <button class="primary-tab active" id="homeTab" type="button" role="tab" aria-selected="true" aria-controls="homePanel" data-primary-tab="home"><span aria-hidden="true">●</span> 실시간 홈</button>
+      <button class="primary-tab" id="myTab" type="button" role="tab" aria-selected="false" aria-controls="myPanel" data-primary-tab="my"><span aria-hidden="true">♙</span> 마이</button>
+    </nav>
+
     <main id="top">
+      <section id="homePanel" role="tabpanel" aria-labelledby="homeTab">
       <section class="hero hero-compact">
-        <div>
-          <h1>빙고서점</h1>
-          <p>우리 학교 어린이 작가들의 책</p>
-        </div>
-        <div class="hero-banner" id="heroBanner" aria-label="학교 소식 배너">
+        <div class="hero-banner" id="heroBanner" aria-label="학교 소식과 이달의 우수작품 배너">
           <article class="hero-slide event-slide active" data-hero-slide>
             <span class="hero-slide-label">학교 행사</span>
             <strong>가을 운동회</strong>
             <time datetime="2026-10-15">10월 15일</time>
             <span class="hero-slide-art" aria-hidden="true">🏃‍♀️🏃‍♂️</span>
           </article>
-          <article class="hero-slide bookstore-slide" data-hero-slide aria-hidden="true">
-            <span class="hero-slide-label">어린이 작가</span>
-            <strong>새로운 이야기를 만나 보세요</strong>
-            <span class="hero-slide-art" aria-hidden="true">📚✨</span>
-          </article>
+          <button class="hero-slide bookstore-slide hero-featured-slide" id="heroFeaturedSlide" type="button" data-hero-slide aria-hidden="true" tabindex="-1">
+            <span class="hero-featured-avatar" aria-hidden="true">✍️</span>
+            <span class="hero-featured-copy">
+              <small class="hero-slide-label" id="heroFeaturedBook">이달의 우수작품</small>
+              <strong id="heroFeaturedAuthor">가상 작가</strong>
+              <span>작품 열어 보기</span>
+            </span>
+            <span class="hero-featured-views" aria-label="조회 수">
+              <span aria-hidden="true">👁</span>
+              <strong id="heroFeaturedViews" aria-live="polite">0</strong>
+              <small>조회</small>
+            </span>
+          </button>
           <div class="hero-dots" aria-hidden="true"><i class="active"></i><i></i></div>
         </div>
       </section>
+
+      <div class="home-search" role="search" aria-label="도서 검색">
+        <label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="책 제목이나 작가를 찾아보세요" /></label>
+      </div>
 
       <section class="ranking-section" aria-labelledby="rankingTitle">
         <div class="ranking-head">
           <div>
             <p class="eyebrow">SAFE ENGAGEMENT · 안전한 독서 반응</p>
-            <h2 id="rankingTitle">많이 읽은 책</h2>
-            <p>고유 조회와 완독을 기준으로 집계하며 어린이 작가 개인 순위는 만들지 않습니다.</p>
+            <h2 id="rankingTitle">실시간 랭킹</h2>
+            <p>승인된 공개 작품의 고유 조회와 완독만 집계합니다. 실명·학년·반과 어린이 작가 개인 순위는 표시하지 않습니다.</p>
           </div>
-          <span class="ranking-mode" id="engagementMode">집계 준비 중</span>
+          <span class="ranking-live"><strong class="ranking-mode" id="engagementMode">집계 준비 중</strong><small id="homeUpdatedAt" aria-live="polite">업데이트 확인 중</small></span>
         </div>
         <div class="ranking-list" id="rankingList" aria-live="polite"></div>
       </section>
 
-      <section class="catalog" aria-labelledby="catalogTitle">
-        <div class="section-heading">
-          <div><p class="eyebrow">SYNTHETIC DATA · 가상 자료</p><h2 id="catalogTitle">가상 샘플 도서</h2><p class="section-description">화면·검색·대여 기능을 시험하기 위해 만든 가상의 제목과 필명입니다. 실제 어린이의 정보가 아닙니다.</p></div>
-          <p id="bookCount" aria-live="polite"></p>
+      <section class="featured-demos" aria-labelledby="demoTitle">
+        <div class="demo-intro">
+          <h2 id="demoTitle">어린이 작가 공간</h2>
         </div>
-        <div class="controls">
-          <label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="책 제목이나 작가를 찾아보세요" /></label>
-          <div class="filters" role="group" aria-label="대여 상태 필터">
-            <button class="filter active" data-filter="all" type="button">전체</button>
-            <button class="filter" data-filter="available" type="button">대여 가능</button>
-            <button class="filter" data-filter="borrowed" type="button">대여 중</button>
-          </div>
+        <div class="demo-preview-grid">
+          <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=reader&amp;from=home&amp;v=9">
+            <img src="./assets/web/synthetic/cloud-library/cover.jpg" alt="구름 위의 비밀 도서관 표지" />
+            <span><small>합성 작품 · 7쪽</small><strong>구름 위의 비밀 도서관</strong><em>카툰 전체화면 보기</em></span>
+          </a>
+          <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=reader&amp;from=home&amp;v=9">
+            <img src="./assets/web/synthetic/brave-dandelion/cover.jpg" alt="용감한 민들레 표지" />
+            <span><small>합성 작품 · 7쪽</small><strong>용감한 민들레</strong><em>카툰 전체화면 보기</em></span>
+          </a>
+        </div>
+      </section>
+
+      <section class="catalog" aria-labelledby="catalogTitle">
+        <div class="section-heading catalog-heading">
+          <h2 id="catalogTitle">자동 생성 도서</h2>
         </div>
         <div class="book-grid" id="bookGrid"></div>
         <div class="empty-state" id="emptyState" hidden><span>🔍</span><h3>찾는 책이 없어요</h3><p>다른 검색어를 입력해 보세요.</p></div>
+      </section>
+      </section>
+
+      <section class="my-panel" id="myPanel" role="tabpanel" aria-labelledby="myTab" hidden>
+        <div class="my-heading">
+          <div><p class="eyebrow">MY BOOKSHELF · 안전한 작품 관리</p><h2>마이</h2><p>작품은 보호자·운영자 검토를 통과하기 전까지 공개되지 않습니다.</p></div>
+        </div>
+        <div id="myDashboard">
+          <div class="my-author-picker">
+            <label for="myAuthorSelect"><strong>어린이 작가 별칭</strong><small>실명·학년·반 없이 공개 승인된 별칭으로만 작품을 구분합니다.</small></label>
+            <select id="myAuthorSelect" aria-describedby="myAuthorPrivacy"></select>
+            <p id="myAuthorPrivacy">실명·학년·반 없이 공개 승인된 별칭의 작품과 승인된 응원만 표시합니다.</p>
+          </div>
+          <div class="my-summary" aria-label="내 활동 요약">
+            <article><span aria-hidden="true">📚</span><small>내 작품</small><strong id="myPublishedCount">0</strong></article>
+            <article><span aria-hidden="true">✏️</span><small>임시저장</small><strong id="myDraftCount">0</strong></article>
+            <article><span aria-hidden="true">💚</span><small>받은 응원</small><strong id="myCheerCount">0</strong></article>
+          </div>
+          <section class="my-section my-editor-section" aria-labelledby="myEditorTitle">
+            <div class="my-section-head"><div><p class="eyebrow">AUTHOR WORKSPACE</p><h3 id="myEditorTitle">작품 편집</h3></div><span>페이지·에피소드·공개 검토</span></div>
+            <div class="demo-preview-grid my-editor-grid">
+              <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=edit&amp;from=my&amp;v=9">
+                <img src="./assets/web/synthetic/cloud-library/cover.jpg" alt="구름 위의 비밀 도서관 편집 화면" />
+                <span><small>합성 데모 · 7쪽</small><strong>구름 위의 비밀 도서관</strong><em>편집 화면 열기</em></span>
+              </a>
+              <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=edit&amp;from=my&amp;v=9">
+                <img src="./assets/web/synthetic/brave-dandelion/cover.jpg" alt="용감한 민들레 편집 화면" />
+                <span><small>합성 데모 · 7쪽</small><strong>용감한 민들레</strong><em>편집 화면 열기</em></span>
+              </a>
+            </div>
+          </section>
+          <section class="my-section" aria-labelledby="myWorksTitle"><div class="my-section-head"><div><p class="eyebrow">MY WORKS</p><h3 id="myWorksTitle">내 작품</h3></div><span>승인·공개 상태</span></div><div class="my-work-list" id="myWorksList"></div></section>
+          <section class="my-section" aria-labelledby="myDraftsTitle"><div class="my-section-head"><div><p class="eyebrow">DRAFTS</p><h3 id="myDraftsTitle">임시저장</h3></div><span>공개 전 보호</span></div><div class="my-work-list" id="myDraftsList"></div></section>
+          <section class="my-section" aria-labelledby="myCheersTitle"><div class="my-section-head"><div><p class="eyebrow">CHEERS</p><h3 id="myCheersTitle">받은 응원</h3></div><span>운영자 승인 댓글만 표시</span></div><div class="my-cheer-list" id="myCheersList"></div></section>
+        </div>
       </section>
     </main>
 
@@ -173,16 +225,26 @@
       </section>
 
       <section class="workflow-panel" data-workflow-panel="agent" hidden>
+        <div class="agent-safety-note" role="note">
+          <strong>합성 데이터 전용 안전 데모</strong>
+          <span>외부 AI로 전송하지 않고 브라우저에서 편집 후보를 생성합니다. 원문은 바꾸지 않으며 채택·거절 전에는 공개본에 반영되지 않습니다.</span>
+        </div>
         <form id="agentForm" class="workflow-form">
           <label class="field">Agent
-            <select id="agentType"><option value="editing">편집</option><option value="summary">출판·요약</option><option value="safety">안전 검토</option><option value="promotion">홍보</option><option value="translation">영어 번역</option></select>
+            <select id="agentType">
+              <option value="editing">편집 제안 · 합성 데모</option>
+              <option value="summary" disabled>출판·요약 · 후속 구현</option>
+              <option value="safety" disabled>안전 검토 · 후속 구현</option>
+              <option value="promotion" disabled>홍보 · 후속 구현</option>
+              <option value="translation" disabled>영어 번역 · 후속 구현</option>
+            </select>
           </label>
           <label class="field">에피소드<select id="agentEpisode"><option value="">작품 전체</option></select></label>
-          <label class="field full">확인된 원문<textarea id="agentInput" rows="8" required placeholder="OCR 결과를 사람이 확인한 뒤 입력하세요."></textarea></label>
+          <label class="field full">확인된 합성 원문 <small>최대 4,000자 · 이메일·전화번호 등 개인정보 후보가 있으면 실행이 중단됩니다.</small><textarea id="agentInput" rows="8" maxlength="4000" required placeholder="예: 구름  아이가 반짝이는 열쇠를 찾았어요"></textarea></label>
           <p class="form-error full" id="agentError" role="alert"></p>
-          <button class="primary-button full" id="agentButton" type="submit">AI 초안 생성</button>
+          <button class="primary-button full" id="agentButton" type="submit">안전 편집 제안 생성</button>
         </form>
-        <div id="suggestionList" class="workflow-list"></div>
+        <div id="suggestionList" class="workflow-list" aria-live="polite"></div>
       </section>
 
       <section class="workflow-panel" data-workflow-panel="review" hidden>
@@ -196,18 +258,10 @@
       </section>
     </dialog>
 
-    <dialog id="loginDialog" class="login-dialog">
-      <form id="loginForm">
-        <div class="dialog-head"><div><p class="eyebrow">OPERATOR</p><h2>운영자 로그인</h2></div><button class="icon-button" type="button" data-close="loginDialog" aria-label="닫기">×</button></div>
-        <p class="dialog-description">관리자 비밀번호 6자리를 입력하세요.</p>
-        <label class="field">관리자 비밀번호<input id="loginPassword" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" required /></label>
-        <p class="form-error" id="loginError" role="alert"></p>
-        <button class="primary-button" id="loginButton" type="submit">관리자 모드 열기</button>
-      </form>
-    </dialog>
-
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="./app.js?v=16" defer></script>
+    <script src="./agent-demo.js?v=2" defer></script>
+    <script src="./server-api.js?v=1" defer></script>
+    <script src="./app.js?v=26" defer></script>
   </body>
 </html>

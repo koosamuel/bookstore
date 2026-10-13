@@ -1,20 +1,19 @@
 # 빙고서점 키오스크
 
-서울서빙고초등학교 축제에서 어린이 작가들이 만든 책을 소개하고 대여 상태를 관리하는 태블릿 전용 정적 웹사이트입니다.
+서울서빙고초등학교 축제에서 어린이 작가들이 만든 책을 소개하고 대여 상태를 관리하는 모바일 우선 정적 웹사이트입니다.
 
-## AI 응용 실습문제 7 제출 정보
+## 기준 소스와 배포
 
-- 코드 저장소: https://github.com/koosamuel/bookstore
-- 외부 접속 주소: https://koosamuel.github.io/bookstore/
-- 데이터베이스: Supabase `bookstore` · Northeast Asia (Seoul)
-- 제출 버전 주요 기능: 도서 검색·필터, 대여 상태 관리, 운영자 인증, 실시간 동기화, 회전형 학교 행사 배너
-- 개인정보 보호: 공개 저장소와 공개 배포본에는 실제 어린이 작품 원본을 포함하지 않고 가상 샘플만 사용합니다.
+- 공동 작업용 공개 저장소: `https://github.com/koosamuel/bookstore`
+- 현재 GitHub Pages 배포: `https://koosamuel.github.io/bookstore/`
+- 공개 저장소와 Pages에는 합성 샘플만 포함한다. 실제 어린이 작품 원본과 비공개 검토 자료는 올리지 않는다.
+- 소유자 전용 OpenAI Sites 작업본의 기능을 공개 안전 범위로 변환해 동기화한다.
 
 ## 운영 구조
 
 ```text
-GitHub 저장소 → GitHub Pages → 행사장 태블릿과 운영 기기
-                                    └─ Supabase: 도서·대여 상태·운영자 인증·Realtime
+GitHub Pages 정적 클라이언트 → Supabase RPC API·RLS·Realtime
+                              └─ 도서·어린이 작가 별칭·독서 반응·운영자 인증
 ```
 
 - 별도의 직접 운영 서버 없이 GitHub Pages와 Supabase를 사용합니다.
@@ -32,13 +31,19 @@ GitHub 저장소 → GitHub Pages → 행사장 태블릿과 운영 기기
 - 관리자 모드에서 등록된 책 삭제
 - 태블릿 전체화면 전환
 - PWA 및 오프라인 캐시
-- 태블릿과 모바일 화면 대응
+- 모바일 하단 `실시간 홈 / 마이` 탭과 안전 영역 대응
+- 768px 이상에서 태블릿·데스크톱 다열 화면으로 확장
 - 작품별 에피소드·페이지·예상 컷 수 관리
 - AI 편집·출판·홍보 초안을 위한 작업실 UI
 - 개인정보·콘텐츠·저작권·보호자 검토와 승인 후 공개 흐름
 - 하루 1회 고유 조회와 완독 수 집계
 - 운영자 승인 후 공개되는 안전 댓글
 - 고유 조회와 완독 중심의 `많이 읽은 책`
+- 가상 작가를 소개하는 `이달의 우수 작가` 카드와 하루 1회 👁 조회 집계
+- `실시간 홈 / 마이` 탭과 URL 해시 상태
+- 실명·학년·반을 제외한 작품 단위 실시간 랭킹
+- 운영자가 작가 별칭을 선택해 확인하는 내 작품·임시저장·받은 응원
+- 공개 홈과 작가 대시보드를 분리한 Supabase RPC API
 
 ## 어린이 작품 출판 기능 설정
 
@@ -64,11 +69,21 @@ supabase/child-publishing.sql
 supabase/engagement.sql
 ```
 
+실시간 홈과 작가별 `마이` 대시보드를 서버 API로 연결하려면 마지막으로 다음 migration을 실행한다.
+
+```text
+supabase/author-portal.sql
+```
+
+`get_public_home_feed()`는 승인·공개된 작품의 제목과 독서 지표만 반환한다. `get_author_dashboard()`는 운영자 인증을 확인한 뒤 선택한 공개 별칭에 해당하는 작품과 승인된 응원만 반환하며 실명·학년·반·연락처 필드를 제공하지 않는다. migration 적용 전에도 합성 자료 기반 안전 대체 화면으로 UI를 확인할 수 있다.
+
 적용 전에는 실제 어린이와 무관한 가상 도서에 한해 브라우저 로컬 데모 집계를 사용한다. 적용 후에는 승인된 공개 작품만 조회·완독을 집계하고, 댓글은 로그인 사용자가 작성한 뒤 운영자가 승인해야 공개된다. 댓글 등록은 서버 RPC가 `10분당 3개`로 제한하고 링크·HTML·전화번호·이메일을 거부한다. 원시 IP와 정확한 위치는 저장하지 않는다.
 
 ### AI 작업실 상태
 
-`supabase/functions/generate-book-content`는 서버 측 함수 경계까지 준비되어 있지만 현재 외부 AI 전송은 비활성화되어 있다. 아동 작품을 외부 서비스로 전송하기 전에 보호자 동의, 전송할 데이터 범위, 사용할 제공자와 보존 정책을 먼저 확정해야 한다. API Key는 브라우저 코드나 저장소에 넣지 않는다.
+합성 샘플에는 `agent-demo.js`의 편집 제안 Agent를 사용할 수 있다. 이 Agent는 브라우저 안에서 공백·문장부호처럼 기계적으로 확인 가능한 후보만 구조화해 제안하며, 이메일·전화번호 등 개인정보 후보가 있으면 실행을 중단한다. 원문은 별도로 보존되고 운영자가 제안을 채택하거나 거절해야 한다.
+
+`supabase/functions/generate-book-content`는 외부 AI를 위한 서버 측 경계만 준비되어 있으며 실제 외부 전송은 계속 비활성화되어 있다. 실제 어린이 작품을 외부 서비스로 전송하기 전에 보호자 동의, 전송 범위, 제공자와 보존 정책을 확정해야 한다. API Key는 브라우저 코드나 저장소에 넣지 않는다.
 
 ## 로컬 실행 환경
 
@@ -78,7 +93,8 @@ supabase/engagement.sql
 source practice/.venv/bin/activate
 which python
 python --version
-cd project/mj_bookstore
+git clone https://github.com/koosamuel/bookstore.git
+cd bookstore
 python -m http.server 8000
 ```
 
@@ -108,12 +124,28 @@ python -m http.server 8000
 
 학생 이름과 사진의 공개 범위는 학교의 개인정보 보호 기준에 맞춰 결정해야 합니다.
 
-## GitHub Pages 배포
+## 배포
 
 저장소의 **Settings → Pages → Build and deployment**에서 Source를 `Deploy from a branch`, Branch를 `main / (root)`로 지정합니다.
 
 배포 주소: `https://koosamuel.github.io/bookstore/`
 
+`scripts/build-static.sh`는 배포 파일을 `dist/`에 묶어 로컬 검증할 때 사용한다. GitHub Pages는 `main / (root)`의 정적 파일을 서비스한다.
+
+## 검증
+
+```bash
+node --check app.js
+node --check agent-demo.js
+node --check server-api.js
+node --test tests/*.test.js
+sh scripts/build-static.sh
+```
+
+자동 테스트는 합성 원문 보존, 실제 자료 차단, 개인정보 후보 차단, 출력 검증 실패, 홈·마이 탭, 작가 별칭 범위, 서버 API 계약, 로컬 대체 저장, 배포 파일 포함 여부와 독서 반응 집계 연결을 확인한다.
+
+`ai_suggestions` 테이블이 아직 없는 환경에서도 합성 데모 Agent는 브라우저 메모리에 결과를 임시 저장해 생성·채택·거절 흐름을 확인할 수 있다. 임시 결과는 새로고침하면 사라지며 실제 어린이 자료에는 사용할 수 없다. 영구 저장은 `supabase/child-publishing.sql` 적용 후 활성화된다.
+
 ## Supabase 설정
 
-데이터베이스 스키마와 RLS 정책은 `supabase/schema.sql`에 있습니다. 운영 데이터는 서울 리전의 `bookstore` 프로젝트에 저장됩니다. 브라우저에는 RLS로 제한되는 Publishable Key만 사용하며, 데이터베이스 비밀번호와 Secret/Service Role Key는 절대로 저장소에 올리지 않습니다.
+데이터베이스 스키마와 RLS 정책은 `supabase/schema.sql`에 있습니다. 브라우저에는 RLS로 제한되는 Publishable Key만 사용하며, 데이터베이스 비밀번호와 Secret/Service Role Key는 절대로 저장소에 올리지 않습니다.

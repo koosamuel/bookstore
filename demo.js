@@ -1,0 +1,501 @@
+const works = [
+  {
+    code: "PUBLIC DEMO 01 · 합성 작품",
+    title: "구름 위의 비밀 도서관",
+    summary: "공개 저장소용 AI 생성 합성 이미지로 페이지 탐색과 한글 OCR 검수 흐름을 시험하는 데모입니다.",
+    folder: "synthetic-cloud-library",
+    assetFolder: "cloud-library",
+    count: 7,
+    genre: "판타지·합성 데모",
+    notice: "실제 어린이 작품이 아닌 공개용 합성 샘플입니다. OCR 결과는 사람이 원본과 대조한 뒤에만 확정합니다.",
+    episodes: [[1,"하늘 도서관 이야기",1,4],[2,"황금 열쇠의 비밀",5,7]]
+  },
+  {
+    code: "PUBLIC DEMO 02 · 합성 작품",
+    title: "용감한 민들레",
+    summary: "공개 저장소용 AI 생성 합성 이미지로 카툰 전체화면과 안전 편집 제안을 확인하는 데모입니다.",
+    folder: "synthetic-brave-dandelion",
+    assetFolder: "brave-dandelion",
+    count: 7,
+    genre: "자연·합성 데모",
+    notice: "실제 어린이 작품이 아닌 공개용 합성 샘플입니다. 자동 제안은 원문을 바꾸지 않으며 사람 승인이 필요합니다.",
+    episodes: [[1,"바람을 만난 씨앗",1,4],[2,"새로운 들판",5,7]]
+  }
+];
+
+let selectedWork = null;
+let selectedPage = 0;
+let selectedEpisode = 0;
+let readerMode = "single";
+let zoom = 1;
+let continuousObserver = null;
+let currentAgentOutput = null;
+let ocrWorkerPromise = null;
+let ocrRunning = false;
+const KOREAN_OCR_MIN_CONFIDENCE = 40;
+const KOREAN_OCR_MIN_RATIO = .25;
+const $ = (selector) => document.querySelector(selector);
+const escapeHtml = (value = "") => String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+const pageParams = new URLSearchParams(window.location.search);
+const readerOnlyMode = pageParams.get("mode") === "reader";
+
+function fileName(work, index) {
+  return `page-${String(index + 1).padStart(2,"0")}.jpg`;
+}
+
+function imagePath(work, index) {
+  return `./assets/web/synthetic/${work.assetFolder}/${fileName(work,index)}`;
+}
+
+function renderCards() {
+  $("#demoGrid").innerHTML = works.map((work,index) => `<article class="demo-card">
+    <div class="demo-card-cover"><img src="${imagePath(work,0)}" alt="${work.title} 첫 페이지" /></div>
+    <div class="demo-card-body"><p class="eyebrow">${work.code}</p><h2>${work.title}</h2><p>${work.summary}</p>
+      <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 에피소드 후보</span><span>${work.genre}</span></div>
+      <button type="button" data-open-work="${index}">이 데모 보기</button>
+    </div></article>`).join("");
+  document.querySelectorAll("[data-open-work]").forEach((button) => button.addEventListener("click", () => openWork(Number(button.dataset.openWork))));
+}
+
+function openWork(index) {
+  selectedWork = works[index];
+  selectedPage = Number(localStorage.getItem(progressKey(selectedWork)) || 0);
+  if (!Number.isInteger(selectedPage) || selectedPage < 0 || selectedPage >= selectedWork.count) selectedPage = 0;
+  selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
+  $("#demoGrid").hidden = true; $("#workspace").hidden = false;
+  $("#workCode").textContent = selectedWork.code;
+  $("#workTitle").textContent = selectedWork.title;
+  $("#workSummary").textContent = selectedWork.summary;
+  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}"><strong>${number}화</strong><span><strong>${title}</strong><br><small>${start}~${end}쪽 · OCR 전 임시 구간</small></span><span class="status">임시 예시</span></button>`).join("");
+  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${selectedWork.notice}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p>`;
+  $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
+  document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
+  document.querySelectorAll("[data-episode-start]").forEach((button) => button.addEventListener("click", () => {
+    selectedEpisode = selectedWork.episodes.findIndex((episode) => episode[2] === Number(button.dataset.episodeStart));
+    selectedPage = Number(button.dataset.episodeStart) - 1;
+    showTab("pages");
+    setReaderMode("continuous");
+  }));
+  if (readerOnlyMode) {
+    document.body.classList.add("reader-only");
+    document.title = `${selectedWork.title} · 카툰 전체화면`;
+    $("#workCode").textContent = "CARTOON READER";
+    $("#workSummary").textContent = `${selectedWork.count}쪽 전체를 세로로 이어서 읽습니다.`;
+    $("#closeWorkspace").textContent = "서점으로";
+    showTab("pages");
+    setReaderMode("continuous");
+  } else {
+    renderContinuousReader();
+    setReaderMode("single"); setZoom(1); showTab("pages"); showPage(selectedPage);
+  }
+  $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function showPage(index) {
+  if (!selectedWork) return;
+  selectedPage = Math.min(Math.max(index,0),selectedWork.count-1);
+  $("#readerMessage").textContent = "원본 이미지를 불러오면 OCR 초안을 만들 수 있습니다.";
+  $("#pageImage").src = imagePath(selectedWork,selectedPage);
+  $("#pageImage").alt = `${selectedWork.title} ${selectedPage+1}쪽`;
+  $("#pageCaption").textContent = `${selectedPage+1} / ${selectedWork.count}쪽 · ${fileName(selectedWork,selectedPage)}`;
+  $("#readerLocation").textContent = `${temporaryEpisodeLabel(selectedWork,selectedPage+1)} · ${selectedPage+1}/${selectedWork.count}쪽`;
+  $("#previousPage").disabled = selectedPage === 0;
+  $("#nextPage").disabled = selectedPage === selectedWork.count-1;
+  if (selectedPage === selectedWork.count-1) $("#readerMessage").textContent = "마지막 페이지입니다. 목차나 썸네일로 다른 페이지를 선택할 수 있습니다.";
+  document.querySelectorAll("[data-page]").forEach((button) => button.classList.toggle("active",Number(button.dataset.page) === selectedPage));
+  document.querySelector(`[data-page="${selectedPage}"]`)?.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+  localStorage.setItem(progressKey(selectedWork),String(selectedPage));
+  applyZoom();
+  loadOcrPageDraft();
+  loadAgentPageDraft();
+}
+
+function progressKey(work) { return `bingo-demo-progress-${work.folder}`; }
+
+function agentDraftKey(work, pageIndex) { return `bingo-agent-draft-${work.folder}-${pageIndex + 1}`; }
+
+function ocrDraftKey(work, pageIndex) { return `bingo-ocr-kor-v2-draft-${work.folder}-${pageIndex + 1}`; }
+
+function readOcrPageDraft() {
+  if (!selectedWork) return null;
+  try {
+    const saved = JSON.parse(localStorage.getItem(ocrDraftKey(selectedWork, selectedPage)) || "null");
+    return saved && typeof saved.text === "string" ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveOcrPageDraft(text, confidence = null, work = selectedWork, pageIndex = selectedPage, quality = "draft") {
+  if (!work) return null;
+  const draft = {
+    text:String(text || "").slice(0,4000),
+    confidence:confidence !== null && confidence !== undefined && Number.isFinite(Number(confidence)) ? Math.round(Number(confidence)) : null,
+    quality,
+    sourceVersion:fileName(work, pageIndex),
+    updatedAt:new Date().toISOString(),
+  };
+  localStorage.setItem(ocrDraftKey(work, pageIndex), JSON.stringify(draft));
+  return draft;
+}
+
+function loadOcrPageDraft() {
+  if (!selectedWork || readerOnlyMode) return;
+  const draft = readOcrPageDraft();
+  $("#ocrDraftPanel").hidden = !draft;
+  $("#ocrUseButton").hidden = !draft?.text.trim();
+  $("#ocrDraftText").value = draft?.text || "";
+  $("#ocrQualityWarning").hidden = draft?.quality !== "rejected";
+  $("#ocrConfidence").textContent = draft?.quality === "rejected"
+    ? `한글 인식 낮음 ${draft.confidence ?? 0}% · 결과 숨김`
+    : draft?.confidence === null || draft?.confidence === undefined
+    ? "사람 검수 필요"
+    : `한글 인식 신뢰도 ${draft.confidence}% · 사람 검수 필요`;
+  $("#ocrRunButton").textContent = draft ? "한글 OCR 다시 생성" : "한글 OCR 초안 생성";
+  $("#transcriptMessage").textContent = draft
+    ? "OCR 초안이 있지만 아직 확정 전사문은 아닙니다. 원본 대조와 사람 검수를 완료해 주세요."
+    : "OCR 초안을 생성한 뒤 사람 검수를 완료해야 제공합니다. 확인되지 않은 글자는 임의로 확정하지 않습니다.";
+  if (draft) $("#readerMessage").textContent = "OCR 초안을 불러왔습니다. 원본과 대조해 검수해 주세요.";
+}
+
+function updateOcrProgress(progress) {
+  const ratio = Math.min(Math.max(Number(progress?.progress) || 0,0),1);
+  const labels = {
+    "loading tesseract core":"OCR 엔진을 불러오는 중",
+    "initializing tesseract":"OCR 엔진을 준비하는 중",
+    "loading language traineddata":"한글·영문 인식 자료를 불러오는 중",
+    "initializing api":"OCR API를 준비하는 중",
+    "recognizing text":"페이지의 글자를 읽는 중",
+  };
+  $("#ocrProgressBar").style.width = `${Math.round(ratio*100)}%`;
+  $("#ocrProgressText").textContent = `${labels[progress?.status] || "OCR 처리 중"} ${Math.round(ratio*100)}%`;
+}
+
+async function getOcrWorker() {
+  if (!window.Tesseract?.createWorker) throw new Error("OCR 모듈을 불러오지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.");
+  if (!ocrWorkerPromise) {
+    ocrWorkerPromise = window.Tesseract.createWorker("kor", 1, { logger:updateOcrProgress })
+      .then(async (worker) => {
+        await worker.setParameters({
+          tessedit_pageseg_mode:String(window.Tesseract.PSM?.SPARSE_TEXT ?? 11),
+          preserve_interword_spaces:"1",
+        });
+        return worker;
+      })
+      .catch((error) => {
+        ocrWorkerPromise = null;
+        throw error;
+      });
+  }
+  return ocrWorkerPromise;
+}
+
+async function prepareKoreanOcrImage(source) {
+  const image = new Image();
+  image.src = source;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext("2d", { willReadFrequently:true });
+  context.filter = "grayscale(1) contrast(1.55) brightness(1.04)";
+  context.drawImage(image,0,0);
+  return canvas;
+}
+
+function koreanTextSignal(text) {
+  const hangul = String(text || "").match(/[ㄱ-ㆎ가-힣]/g)?.length || 0;
+  const letters = String(text || "").match(/[A-Za-zㄱ-ㆎ가-힣]/g)?.length || 0;
+  return { hangul, ratio:letters ? hangul / letters : 0 };
+}
+
+async function runOcr() {
+  if (!selectedWork || ocrRunning || readerOnlyMode) return;
+  const ocrWork = selectedWork;
+  const ocrPage = selectedPage;
+  ocrRunning = true;
+  $("#ocrRunButton").disabled = true;
+  $("#ocrRunButton").textContent = "OCR 처리 중…";
+  $("#ocrProgress").hidden = false;
+  $("#ocrDraftPanel").hidden = true;
+  $("#ocrUseButton").hidden = true;
+  $("#readerMessage").textContent = "원본 이미지를 기기 안에서 인식하고 있습니다.";
+  try {
+    const [worker, preparedImage] = await Promise.all([
+      getOcrWorker(),
+      prepareKoreanOcrImage(imagePath(ocrWork, ocrPage)),
+    ]);
+    const result = await worker.recognize(preparedImage);
+    const text = String(result?.data?.text || "").replace(/\r/g,"").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
+    const confidence = Math.round(Number(result?.data?.confidence) || 0);
+    const signal = koreanTextSignal(text);
+    const acceptable = confidence >= KOREAN_OCR_MIN_CONFIDENCE && signal.hangul >= 2 && signal.ratio >= KOREAN_OCR_MIN_RATIO;
+    const draft = saveOcrPageDraft(acceptable ? text : "", confidence, ocrWork, ocrPage, acceptable ? "draft" : "rejected");
+    if (selectedWork !== ocrWork || selectedPage !== ocrPage) return;
+    $("#ocrDraftText").value = draft.text;
+    $("#ocrQualityWarning").hidden = acceptable;
+    $("#ocrConfidence").textContent = acceptable
+      ? `한글 인식 신뢰도 ${draft.confidence ?? 0}% · 사람 검수 필요`
+      : `한글 인식 낮음 ${draft.confidence ?? 0}% · 결과 숨김`;
+    $("#ocrDraftPanel").hidden = false;
+    $("#ocrUseButton").hidden = !draft.text;
+    $("#transcriptMessage").textContent = "OCR 초안이 있지만 아직 확정 전사문은 아닙니다. 원본 대조와 사람 검수를 완료해 주세요.";
+    $("#readerMessage").textContent = draft.text
+      ? "OCR 초안을 생성했습니다. 원본과 대조해 틀린 글자를 고쳐 주세요."
+      : "한글 손글씨 인식률이 낮아 잘못된 영문 결과를 숨겼습니다. 원본을 보며 직접 입력해 주세요.";
+  } catch (error) {
+    $("#readerMessage").textContent = `OCR 실패: ${error?.message || "인식 모듈을 실행하지 못했습니다."}`;
+    loadOcrPageDraft();
+  } finally {
+    ocrRunning = false;
+    $("#ocrRunButton").disabled = false;
+    $("#ocrProgress").hidden = true;
+    $("#ocrProgressBar").style.width = "0%";
+    $("#ocrRunButton").textContent = readOcrPageDraft() ? "한글 OCR 다시 생성" : "한글 OCR 초안 생성";
+  }
+}
+
+function sendOcrDraftToAgent() {
+  if (!selectedWork) return;
+  const text = $("#ocrDraftText").value.trim();
+  if (!text) return;
+  saveOcrPageDraft(text, readOcrPageDraft()?.confidence);
+  localStorage.setItem(agentDraftKey(selectedWork, selectedPage), text);
+  showTab("agent");
+  $("#agentPageText").value = text;
+  $("#agentHumanConfirmed").checked = false;
+  $("#agentError").textContent = "OCR 초안을 가져왔습니다. 원본과 대조한 뒤 확인 표시를 해 주세요.";
+}
+
+function loadAgentPageDraft() {
+  if (!selectedWork || readerOnlyMode) return;
+  $("#agentPageContext").textContent = `${selectedWork.title} · ${selectedPage + 1}/${selectedWork.count}쪽`;
+  $("#agentEpisodeContext").textContent = temporaryEpisodeLabel(selectedWork, selectedPage + 1);
+  $("#agentPageText").value = localStorage.getItem(agentDraftKey(selectedWork, selectedPage)) || "";
+  $("#agentHumanConfirmed").checked = false;
+  $("#agentError").textContent = "";
+  $("#agentResultPanel").hidden = true;
+  currentAgentOutput = null;
+}
+
+function renderAgentSuggestions(output) {
+  currentAgentOutput = output;
+  $("#agentResultSummary").textContent = output.result.summary;
+  $("#agentSuggestionList").innerHTML = output.result.suggestions.length ? output.result.suggestions.map((suggestion) => `<article class="agent-suggestion"><div class="agent-suggestion-copy"><span>${escapeHtml(suggestion.reason)}</span><del>${escapeHtml(suggestion.original)}</del><ins>${escapeHtml(suggestion.replacement)}</ins></div><button type="button" data-agent-suggestion="${escapeHtml(suggestion.id)}">이 제안 적용</button></article>`).join("") : `<div class="agent-no-change">현재 문장을 그대로 유지하는 것이 좋습니다.</div>`;
+  $("#agentResultPanel").hidden = false;
+}
+
+function runPageAgent(event) {
+  event.preventDefault();
+  $("#agentError").textContent = "";
+  if (!selectedWork) return;
+  if (!$("#agentHumanConfirmed").checked) {
+    $("#agentError").textContent = "원본 이미지와 문장을 사람이 확인했는지 체크해 주세요.";
+    return;
+  }
+  try {
+    const output = window.BingoEditingAgent.run({
+      type:"editing",
+      sourceScope:"synthetic-demo",
+      localOnly:true,
+      humanConfirmed:true,
+      bookId:selectedWork.folder,
+      episodeId:temporaryEpisodeLabel(selectedWork, selectedPage + 1),
+      sourceVersion:fileName(selectedWork, selectedPage),
+      inputText:$("#agentPageText").value,
+    });
+    localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value.trim());
+    renderAgentSuggestions(output);
+  } catch (error) {
+    $("#agentError").textContent = error.message;
+    $("#agentResultPanel").hidden = true;
+  }
+}
+
+function applyAgentSuggestion(id) {
+  const suggestion = currentAgentOutput?.result.suggestions.find((item) => item.id === id);
+  if (!suggestion || !selectedWork) return;
+  $("#agentPageText").value = suggestion.replacement;
+  localStorage.setItem(agentDraftKey(selectedWork, selectedPage), suggestion.replacement);
+  $("#agentResultSummary").textContent = "선택한 제안을 페이지 초안에 적용했습니다. 원본 이미지는 변경되지 않았습니다.";
+}
+
+function temporaryEpisodeLabel(work,pageNumber) {
+  const episode = work.episodes.find(([, ,start,end]) => pageNumber >= start && pageNumber <= end);
+  return episode ? `임시 ${episode[0]}화` : "에피소드 미지정";
+}
+
+function episodeIndexForPage(work, pageNumber) {
+  const index = work.episodes.findIndex(([, ,start,end]) => pageNumber >= start && pageNumber <= end);
+  return index < 0 ? 0 : index;
+}
+
+function episodeProgressKey(work, episodeNumber) {
+  return `bingo-demo-episode-progress-${work.folder}-${episodeNumber}`;
+}
+
+function renderContinuousReader() {
+  const episode = selectedWork.episodes[selectedEpisode];
+  const [number, episodeTitle, episodeStart, episodeEnd] = episode;
+  const title = readerOnlyMode ? selectedWork.title : episodeTitle;
+  const start = readerOnlyMode ? 1 : episodeStart;
+  const end = readerOnlyMode ? selectedWork.count : episodeEnd;
+  const savedValue = readerOnlyMode ? localStorage.getItem(progressKey(selectedWork)) : localStorage.getItem(episodeProgressKey(selectedWork,number));
+  const savedPage = readerOnlyMode ? Number(savedValue || 0) : Number(savedValue || start) - 1;
+  selectedPage = Math.min(Math.max(savedPage,start-1),end-1);
+  $("#episodeReaderTitle").textContent = readerOnlyMode ? title : `임시 ${number}화 · ${title}`;
+  $("#episodeReaderNotice").textContent = readerOnlyMode ? `${start}~${end}쪽 전체 작품을 원본 순서대로 표시합니다.` : `${selectedWork.notice} 컷 분리 전이므로 ${start}~${end}쪽 원본 전체를 각각 하나의 임시 컷으로 표시합니다.`;
+  const initialPosition = selectedPage - start + 2;
+  const initialTotal = end - start + 1;
+  const initialProgress = Math.round((initialPosition / initialTotal) * 100);
+  $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${initialPosition}/${initialTotal}쪽` : `임시 ${number}화 · 컷 ${initialPosition}/${initialTotal} · 원본 ${selectedPage+1}쪽`;
+  $("#episodeProgress").textContent = `${initialProgress}%`;
+  $("#episodeProgressBar").style.width = `${initialProgress}%`;
+  $("#previousEpisode").disabled = selectedEpisode === 0;
+  $("#nextEpisode").disabled = selectedEpisode === selectedWork.episodes.length - 1;
+  $("#continuousReader").innerHTML = Array.from({length:end-start+1},(_,offset) => {
+    const page = start + offset - 1;
+    const pageLabel = readerOnlyMode ? `${offset+1}/${end-start+1}쪽` : `임시 컷 ${offset+1}/${end-start+1} · 원본 ${page+1}쪽`;
+    return `<figure class="continuous-page" id="continuous-page-${page+1}"><img src="${imagePath(selectedWork,page)}" alt="${title} ${pageLabel}" loading="lazy"><figcaption>${pageLabel}</figcaption></figure>`;
+  }).join("");
+  $("#continuousReader").querySelectorAll("img").forEach((image) => addImageStatusHandlers(image));
+  continuousObserver?.disconnect();
+  continuousObserver = new IntersectionObserver((entries) => {
+    if (readerMode !== "continuous") return;
+    const visible = entries.filter((entry) => entry.isIntersecting).sort((a,b) => b.intersectionRatio-a.intersectionRatio)[0];
+    if (!visible) return;
+    selectedPage = Number(visible.target.id.replace("continuous-page-",""))-1;
+    const position = selectedPage - start + 2;
+    const total = end - start + 1;
+    const progress = Math.round((position / total) * 100);
+    $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${position}/${total}쪽` : `임시 ${number}화 · 컷 ${position}/${total} · 원본 ${selectedPage+1}쪽`;
+    $("#episodeProgress").textContent = `${progress}%`;
+    $("#episodeProgressBar").style.width = `${progress}%`;
+    localStorage.setItem(progressKey(selectedWork),String(selectedPage));
+    if (!readerOnlyMode) localStorage.setItem(episodeProgressKey(selectedWork,number),String(selectedPage+1));
+  },{threshold:[.35,.6]});
+  $("#continuousReader").querySelectorAll(".continuous-page").forEach((page) => continuousObserver.observe(page));
+}
+
+function setReaderMode(mode) {
+  readerMode = mode;
+  const continuous = mode === "continuous";
+  $("#singlePageViewer").hidden = continuous;
+  $("#webtoonViewer").hidden = !continuous;
+  $("#singleModeButton").classList.toggle("active",!continuous);
+  $("#continuousModeButton").classList.toggle("active",continuous);
+  $("#thumbnailStrip").hidden = continuous;
+  $("#zoomOutButton").disabled = continuous;
+  $("#zoomInButton").disabled = continuous;
+  $("#fitButton").disabled = continuous;
+  if (continuous) {
+    selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
+    renderContinuousReader();
+    document.querySelector(`#continuous-page-${selectedPage+1}`)?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+}
+
+function changeEpisode(direction) {
+  if (readerOnlyMode) return;
+  const next = selectedEpisode + direction;
+  if (next < 0 || next >= selectedWork.episodes.length) return;
+  selectedEpisode = next;
+  renderContinuousReader();
+  $("#webtoonViewer").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function setZoom(value) {
+  zoom = Math.min(Math.max(value,.5),2);
+  $("#zoomValue").textContent = `${Math.round(zoom*100)}%`;
+  applyZoom();
+}
+
+function applyZoom() {
+  const image = $("#pageImage");
+  image.style.width = `${Math.round(zoom*100)}%`;
+}
+
+function addImageStatusHandlers(image) {
+  image.addEventListener("load",() => {
+    if (!readOcrPageDraft()) $("#readerMessage").textContent = "원본 이미지를 표시했습니다. OCR 초안을 생성할 수 있습니다.";
+  });
+  image.addEventListener("error",() => { $("#readerMessage").textContent = "이미지를 불러오지 못했습니다. 파일 경로와 로컬 서버를 확인하세요."; });
+}
+
+function setupPanControls() {
+  const pan = $("#imagePan");
+  let active = false;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+  pan.addEventListener("pointerdown",(event) => {
+    if (zoom <= 1) return;
+    active = true; startX = event.clientX; startY = event.clientY;
+    startLeft = pan.scrollLeft; startTop = pan.scrollTop;
+    pan.classList.add("dragging"); pan.setPointerCapture(event.pointerId);
+  });
+  pan.addEventListener("pointermove",(event) => {
+    if (!active) return;
+    pan.scrollLeft = startLeft-(event.clientX-startX);
+    pan.scrollTop = startTop-(event.clientY-startY);
+  });
+  const finish = (event) => { if (!active) return; active = false; pan.classList.remove("dragging"); if (pan.hasPointerCapture(event.pointerId)) pan.releasePointerCapture(event.pointerId); };
+  pan.addEventListener("pointerup",finish);
+  pan.addEventListener("pointercancel",finish);
+}
+
+function showTab(name) {
+  document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active",button.dataset.tab === name));
+  document.querySelectorAll("[data-panel]").forEach((panel) => { const active = panel.dataset.panel === name; panel.classList.toggle("active",active); panel.hidden = !active; });
+  if (name === "agent") loadAgentPageDraft();
+}
+
+renderCards();
+const requestedWorkValue = pageParams.get("work");
+const requestedWork = requestedWorkValue === null ? null : Number(requestedWorkValue);
+if (Number.isInteger(requestedWork) && requestedWork >= 0 && requestedWork < works.length) openWork(requestedWork);
+document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click",() => showTab(button.dataset.tab)));
+$("#previousPage").addEventListener("click",() => showPage(selectedPage-1));
+$("#nextPage").addEventListener("click",() => showPage(selectedPage+1));
+$("#singleModeButton").addEventListener("click",() => setReaderMode("single"));
+$("#continuousModeButton").addEventListener("click",() => setReaderMode("continuous"));
+$("#previousEpisode").addEventListener("click",() => changeEpisode(-1));
+$("#nextEpisode").addEventListener("click",() => changeEpisode(1));
+$("#episodeListButton").addEventListener("click",() => showTab("episodes"));
+$("#zoomOutButton").addEventListener("click",() => setZoom(zoom-.25));
+$("#zoomInButton").addEventListener("click",() => setZoom(zoom+.25));
+$("#fitButton").addEventListener("click",() => setZoom(1));
+$("#ocrRunButton").addEventListener("click",runOcr);
+$("#ocrUseButton").addEventListener("click",sendOcrDraftToAgent);
+$("#ocrDraftText").addEventListener("input",() => {
+  if (!selectedWork) return;
+  const existing = readOcrPageDraft();
+  saveOcrPageDraft($("#ocrDraftText").value, existing?.confidence, selectedWork, selectedPage, $("#ocrDraftText").value.trim() ? "manual" : existing?.quality);
+  $("#ocrQualityWarning").hidden = Boolean($("#ocrDraftText").value.trim());
+  $("#ocrUseButton").hidden = !$("#ocrDraftText").value.trim();
+});
+$("#agentEditorForm").addEventListener("submit",runPageAgent);
+$("#agentPageText").addEventListener("input",() => { if (selectedWork) localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value); });
+$("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
+$("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
+$("#contrastButton").addEventListener("click",(event) => { const active = document.body.classList.toggle("high-contrast"); event.currentTarget.setAttribute("aria-pressed",String(active)); });
+$("#readerFullscreenButton").addEventListener("click",async () => {
+  try { if (!document.fullscreenElement) await $("#workspace").requestFullscreen(); else await document.exitFullscreen(); }
+  catch { $("#readerMessage").textContent = "이 브라우저에서는 전체화면을 열 수 없습니다."; }
+});
+addImageStatusHandlers($("#pageImage"));
+setupPanControls();
+document.addEventListener("keydown",(event) => {
+  if (!selectedWork || $("#workspace").hidden || event.target.matches("input,textarea,select")) return;
+  if (readerMode === "single" && event.key === "ArrowLeft") showPage(selectedPage-1);
+  if (readerMode === "single" && event.key === "ArrowRight") showPage(selectedPage+1);
+  if (readerMode === "single" && (event.key === "+" || event.key === "=")) setZoom(zoom+.25);
+  if (readerMode === "single" && event.key === "-") setZoom(zoom-.25);
+  if (event.key === "1") setReaderMode("single");
+  if (event.key === "2") setReaderMode("continuous");
+});
+$("#closeWorkspace").addEventListener("click",() => {
+  if (readerOnlyMode) { window.location.href = "./index.html#home"; return; }
+  $("#workspace").hidden = true; $("#demoGrid").hidden = false; window.scrollTo({top:0,behavior:"smooth"});
+});

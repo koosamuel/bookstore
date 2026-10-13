@@ -2,14 +2,15 @@ const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_aQpJ9mF2fngaiZHFG89fzw_4ZoiCBPw";
 const OPERATOR_EMAIL = "operator@bingo.local";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const serverApi = window.BingoServerApi.create(db);
 
 let books = [];
 let session = null;
-let filter = "all";
 let query = "";
 let workflowEpisodes = [];
 let workflowSuggestions = [];
 let workflowReviews = [];
+let workflowSuggestionStorage = "remote";
 const REVIEW_TYPES = [
   ["privacy", "개인정보"], ["content", "콘텐츠 안내"],
   ["copyright", "저작권"], ["guardian", "보호자 동의"]
@@ -60,6 +61,11 @@ let engagementMetrics = {};
 let engagementComments = {};
 let engagementSettings = {};
 let moderationComments = [];
+let activePrimaryTab = "home";
+let homeFeedGeneratedAt = null;
+let authorDashboard = null;
+let activeAuthorAlias = "";
+let authorDashboardMode = "loading";
 
 function setSyncStatus(message, state = "") {
   const element = $("#syncStatus");
@@ -68,7 +74,96 @@ function setSyncStatus(message, state = "") {
 }
 
 function updateAuthUi() {
-  $("#manageButton").textContent = session ? "대여 관리" : "운영자 로그인";
+  if (!session) {
+    authorDashboard = null;
+    activeAuthorAlias = "";
+    authorDashboardMode = "loading";
+  }
+  renderMyDashboard();
+}
+
+function setPrimaryTab(tab) {
+  activePrimaryTab = tab === "my" ? "my" : "home";
+  document.querySelectorAll("[data-primary-tab]").forEach((button) => {
+    const selected = button.dataset.primaryTab === activePrimaryTab;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+  });
+  $("#homePanel").hidden = activePrimaryTab !== "home";
+  $("#myPanel").hidden = activePrimaryTab !== "my";
+  if (activePrimaryTab === "my") {
+    renderMyDashboard();
+    if (session) refreshAuthorDashboard();
+  }
+  history.replaceState(null, "", activePrimaryTab === "my" ? "#my" : "#home");
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function publicationLabel(status) {
+  return ({ published:"공개 중", approved:"승인 완료", review:"검토 중", rejected:"수정 필요", draft:"임시저장" })[status] || "기존 공개";
+}
+
+function myWorkMarkup(item) {
+  const book = books.find((candidate) => candidate.id === (item.bookId || item.id)) || item;
+  const id = item.bookId || book.id;
+  const status = item.publicationStatus || book.publication_status;
+  const metric = item.bookId ? { unique_views:item.uniqueViews, completions:item.completions } : metricFor(id);
+  const cover = item.coverUrl || book.cover_url;
+  const action = isOperatorSession() ? `<button type="button" data-my-work="${escapeHtml(id)}">작품 작업</button>` : `<span class="my-work-state">읽기 전용</span>`;
+  return `<article class="my-work-card"><span class="my-work-cover">${cover ? `<img src="${escapeHtml(cover)}" alt="" />` : escapeHtml(item.emoji || book.emoji || "📖")}</span><span class="my-work-copy"><small>${escapeHtml(id)} · ${escapeHtml(publicationLabel(status))}</small><strong>${escapeHtml(item.title || book.title)}</strong><em>조회 ${metric.unique_views || 0} · 완독 ${metric.completions || 0}</em></span>${action}</article>`;
+}
+
+function authorAliases() {
+  return [...new Set(books.map((book) => String(book.author || "").trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, "ko"));
+}
+
+function fallbackAuthorDashboard(alias) {
+  const works = books.filter((book) => book.author === alias).map((book) => {
+    const metric = metricFor(book.id);
+    return { bookId:book.id, title:book.title, coverUrl:book.cover_url, emoji:book.emoji, publicationStatus:book.publication_status || "published", uniqueViews:metric.unique_views, completions:metric.completions, approvedCheers:metric.approved_comments };
+  });
+  const cheers = Object.values(engagementComments).flat().filter((item) => works.some((work) => work.bookId === item.book_id)).map((item) => ({ id:item.id, bookId:item.book_id, title:books.find((book) => book.id === item.book_id)?.title || "작품", body:item.body, createdAt:item.created_at }));
+  return { authorAlias:alias, works, cheers, summary:{ published:works.filter((item) => item.publicationStatus === "published").length, drafts:works.filter((item) => item.publicationStatus !== "published").length, cheers:cheers.length } };
+}
+
+async function refreshAuthorDashboard() {
+  if (!session || !isOperatorSession()) return;
+  const aliases = authorAliases();
+  if (!activeAuthorAlias || !aliases.includes(activeAuthorAlias)) activeAuthorAlias = aliases[0] || "";
+  if (!activeAuthorAlias) { authorDashboard = null; renderMyDashboard(); return; }
+  try {
+    const remote = await serverApi.getAuthorDashboard(activeAuthorAlias);
+    authorDashboard = remote || fallbackAuthorDashboard(activeAuthorAlias);
+    authorDashboardMode = remote ? "server" : "fallback";
+  } catch (error) {
+    console.warn("작가 대시보드 API를 불러오지 못해 현재 세션 자료를 사용합니다.", error);
+    authorDashboard = fallbackAuthorDashboard(activeAuthorAlias);
+    authorDashboardMode = "fallback";
+  }
+  renderMyDashboard();
+}
+
+function renderMyDashboard() {
+  const dashboard = $("#myDashboard");
+  if (!dashboard) return;
+  dashboard.hidden = false;
+  const select = $("#myAuthorSelect");
+  const aliases = authorAliases();
+  if (!activeAuthorAlias || !aliases.includes(activeAuthorAlias)) activeAuthorAlias = aliases[0] || "";
+  select.innerHTML = aliases.length ? aliases.map((alias) => `<option value="${escapeHtml(alias)}" ${alias === activeAuthorAlias ? "selected" : ""}>${escapeHtml(alias)}</option>`).join("") : `<option value="">등록된 작가 별칭 없음</option>`;
+  select.disabled = !aliases.length;
+  const data = authorDashboard?.authorAlias === activeAuthorAlias ? authorDashboard : fallbackAuthorDashboard(activeAuthorAlias);
+  const published = data.works.filter((item) => item.publicationStatus === "published");
+  const drafts = data.works.filter((item) => item.publicationStatus !== "published");
+  const cheers = data.cheers;
+  $("#myPublishedCount").textContent = String(published.length);
+  $("#myDraftCount").textContent = String(drafts.length);
+  $("#myCheerCount").textContent = String(cheers.length);
+  $("#myWorksList").innerHTML = published.length ? published.map(myWorkMarkup).join("") : `<div class="all-available">승인되어 공개 중인 작품이 없습니다.</div>`;
+  $("#myDraftsList").innerHTML = drafts.length ? drafts.map(myWorkMarkup).join("") : `<div class="all-available">임시저장 또는 검토 중인 작품이 없습니다.</div>`;
+  $("#myCheersList").innerHTML = cheers.length ? cheers.slice(0,20).map((item) => `<article><span aria-hidden="true">💚</span><div><strong>${escapeHtml(item.title || "작품")}</strong><p>${escapeHtml(item.body)}</p><small>승인된 독자 응원 · ${item.createdAt ? new Date(item.createdAt).toLocaleDateString("ko-KR") : "날짜 미상"}</small></div></article>`).join("") : `<div class="all-available">아직 승인된 응원이 없습니다.</div>`;
+  $("#myAuthorPrivacy").textContent = `${authorDashboardMode === "server" ? "서버 API" : "공개 자료 모드"} · 선택한 별칭의 작품과 승인된 응원만 표시합니다.`;
+  document.querySelectorAll("[data-my-work]").forEach((button) => button.addEventListener("click", () => openWorkflow(button.dataset.myWork)));
 }
 
 function isOperatorSession() {
@@ -89,6 +184,7 @@ async function loadBooks() {
     return demo ? {...book, title:demo.title, author:demo.author, description:demo.description, cover_url:`./assets/web/synthetic/${demo.slug}/cover.jpg`, grade:demo.grade, data_origin:"synthetic"} : book;
   }).sort((a, b) => bookSortNumber(a.id) - bookSortNumber(b.id) || a.id.localeCompare(b.id, "ko"));
   await loadEngagement();
+  if (session) await refreshAuthorDashboard();
   setSyncStatus("실시간 연결", "online");
   renderBooks();
 }
@@ -96,29 +192,28 @@ async function loadBooks() {
 function coverMarkup(book, className = "cover") {
   const image = book.cover_url ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(book.title)} 표지" />` : escapeHtml(book.emoji || "📖");
   const title = PICTURE_BOOK_DEMOS[book.id] ? `<span class="cover-title">${escapeHtml(book.title)}</span>` : "";
+  if (className === "detail-cover" && PICTURE_BOOK_DEMOS[book.id]) {
+    return `<button class="${className} detail-cover-trigger" id="detailCoverButton" type="button" style="--cover:${escapeHtml(book.color || "#e8f5ef")}" aria-label="${escapeHtml(book.title)} 카툰 전체화면으로 읽기">${image}${title}<span class="detail-cover-hint">그림을 눌러 전체화면으로 읽기</span></button>`;
+  }
   return `<div class="${className}" style="--cover:${escapeHtml(book.color || "#e8f5ef")}">${image}${title}</div>`;
 }
 
 function renderBooks() {
   const visible = books.filter((book) => {
     const matchesQuery = `${book.title} ${book.author}`.toLowerCase().includes(query.toLowerCase());
-    const borrowed = isBorrowed(book);
-    return matchesQuery && (filter === "all" || (filter === "borrowed" ? borrowed : !borrowed));
+    return matchesQuery;
   });
-  const syntheticCount = books.filter(isSynthetic).length;
-  const actualCount = books.length - syntheticCount;
-  $("#bookCount").textContent = actualCount ? `가상 ${syntheticCount}권 · 실제 ${actualCount}권` : `가상 샘플 ${syntheticCount}권`;
   $("#bookGrid").innerHTML = visible.map((book) => {
-    const borrowed = isBorrowed(book);
     const metric = metricFor(book.id);
     return `<button class="book-card" type="button" data-book-id="${escapeHtml(book.id)}">
       <span class="book-id">${escapeHtml(book.id)}</span>${coverMarkup(book)}
-      <span class="card-body"><span class="status ${borrowed ? "borrowed" : ""}">${borrowed ? "대여 중" : "대여 가능"}</span><span class="data-origin ${isSynthetic(book) ? "" : "actual"}">${isSynthetic(book) ? "가상 샘플" : "실제 자료"}</span><h3>${escapeHtml(book.title)}</h3><p class="author">${escapeHtml(book.author)}</p><span class="card-metrics"><span>조회 ${metric.unique_views}</span><span>완독 ${metric.completions}</span></span></span>
+      <span class="card-body"><h3>${escapeHtml(book.title)}</h3><p class="author">${escapeHtml(book.author)}</p><span class="card-metrics"><span>조회 ${metric.unique_views}</span><span>완독 ${metric.completions}</span></span></span>
     </button>`;
   }).join("");
   $("#emptyState").hidden = visible.length > 0;
   document.querySelectorAll("[data-book-id]").forEach((button) => button.addEventListener("click", () => openBook(button.dataset.bookId)));
   renderRanking();
+  renderMyDashboard();
 }
 
 function openBook(id) {
@@ -126,7 +221,7 @@ function openBook(id) {
   if (!book) return;
   $("#bookDialog").classList.remove("reader-dialog");
   const borrowed = isBorrowed(book);
-  const actionLabel = borrowed ? "지금은 대여 중이에요" : (session ? "이 책 대여하기" : "운영자 로그인 후 대여 가능");
+  const actionLabel = borrowed ? "지금은 대여 중이에요" : (session ? "이 책 대여하기" : "온라인 대여 준비 중");
   $("#bookDialogContent").innerHTML = `<article class="book-detail">${coverMarkup(book,"detail-cover")}<div class="detail-content">
     <button class="icon-button" type="button" data-close="bookDialog" aria-label="닫기">×</button>
     <span class="status ${borrowed ? "borrowed" : ""}">${borrowed ? "대여 중" : "대여 가능"}</span><span class="data-origin ${isSynthetic(book) ? "" : "actual"}">${isSynthetic(book) ? "가상 샘플 · 실제 인물 아님" : "실제 자료"}</span>
@@ -139,7 +234,11 @@ function openBook(id) {
   $("#bookDialog").showModal();
   $("#bookDialogContent [data-close]").addEventListener("click", () => $("#bookDialog").close());
   bindCommentForm(id);
-  if (PICTURE_BOOK_DEMOS[id]) $("#pictureBookButton").addEventListener("click", () => openPictureBook(id, 0));
+  if (PICTURE_BOOK_DEMOS[id]) {
+    const openReader = () => openPictureBook(id, 0);
+    $("#detailCoverButton").addEventListener("click", openReader);
+    $("#pictureBookButton").addEventListener("click", openReader);
+  }
   if (!borrowed && session) $("#borrowButton").addEventListener("click", () => borrowBook(id));
   recordBookEngagement(id, false);
 }
@@ -218,6 +317,7 @@ function writeLocalEngagement(value) {
 function useLocalEngagement() {
   const local = readLocalEngagement();
   engagementMode = "local";
+  homeFeedGeneratedAt = null;
   engagementMetrics = local.metrics || {};
   engagementComments = (local.comments || []).filter((item) => item.status === "approved").reduce((groups, item) => {
     (groups[item.book_id] ||= []).push(item);
@@ -227,8 +327,11 @@ function useLocalEngagement() {
 }
 
 async function loadEngagement() {
+  let homeFeed = null;
+  try { homeFeed = await serverApi.getHomeFeed(); }
+  catch (error) { console.warn("홈 피드 API를 불러오지 못해 기존 조회 방식을 사용합니다.", error); }
   const [metricsResult, commentsResult, settingsResult] = await Promise.all([
-    db.from("book_engagement_totals").select("*"),
+    homeFeed ? Promise.resolve({ data:homeFeed.rankings.map((item) => ({ book_id:item.bookId, unique_views:item.uniqueViews, completions:item.completions, approved_comments:item.approvedCheers, ranking_score:item.rankingScore })), error:null }) : db.from("book_engagement_totals").select("*"),
     db.from("book_comments").select("id,book_id,body,reader_label,status,created_at").eq("status", "approved").order("created_at", { ascending:false }).limit(100),
     db.from("book_engagement_settings").select("book_id,comments_enabled,ranking_enabled")
   ]);
@@ -239,6 +342,7 @@ async function loadEngagement() {
     return;
   }
   engagementMode = "shared";
+  homeFeedGeneratedAt = homeFeed?.generatedAt || new Date().toISOString();
   engagementMetrics = Object.fromEntries((metricsResult.data || []).map((item) => [item.book_id, {
     unique_views:Number(item.unique_views) || 0,
     completions:Number(item.completions) || 0,
@@ -256,16 +360,43 @@ function metricFor(bookId) {
   return engagementMetrics[bookId] || { unique_views:0, completions:0, approved_comments:0, ranking_score:0 };
 }
 
+function featuredAuthorDisplayName(author) {
+  return String(author || "").replace(/\s*\(가상 페르소나\)\s*$/, "").trim();
+}
+
+function renderFeaturedAuthor() {
+  const heroCard = $("#heroFeaturedSlide");
+  if (!heroCard) return;
+  const featured = books
+    .filter((book) => isSynthetic(book) && engagementSettings[book.id]?.ranking_enabled !== false)
+    .map((book) => ({ book, metric:metricFor(book.id) }))
+    .sort((a,b) => b.metric.ranking_score-a.metric.ranking_score || b.metric.unique_views-a.metric.unique_views || bookSortNumber(a.book.id)-bookSortNumber(b.book.id))[0];
+  if (!featured) {
+    heroCard.disabled = true;
+    return;
+  }
+  const { book, metric } = featured;
+  const authorName = featuredAuthorDisplayName(book.author);
+  $("#heroFeaturedBook").textContent = `이달의 우수작품 · ${book.title}`;
+  $("#heroFeaturedAuthor").textContent = authorName;
+  $("#heroFeaturedViews").textContent = String(metric.unique_views);
+  heroCard.disabled = false;
+  heroCard.setAttribute("aria-label", `${authorName}의 이달의 우수작품 ${book.title} 열기, 현재 조회 ${metric.unique_views}`);
+  heroCard.onclick = () => openBook(book.id);
+}
+
 function renderRanking() {
   const list = $("#rankingList");
   if (!list) return;
-  $("#engagementMode").textContent = engagementMode === "shared" ? "공유 집계" : "가상 로컬 집계";
+  renderFeaturedAuthor();
+  $("#engagementMode").textContent = engagementMode === "shared" ? "서버 실시간 집계" : "가상 로컬 집계";
+  $("#homeUpdatedAt").textContent = homeFeedGeneratedAt ? `${new Date(homeFeedGeneratedAt).toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" })} 갱신` : "로컬 데모";
   const ranked = books
-    .filter((book) => engagementSettings[book.id]?.ranking_enabled !== false)
+    .filter((book) => (book.publication_status === "published" || (!book.publication_status && isSynthetic(book))) && engagementSettings[book.id]?.ranking_enabled !== false)
     .map((book) => ({ book, metric:metricFor(book.id) }))
     .sort((a,b) => b.metric.ranking_score-a.metric.ranking_score || b.metric.unique_views-a.metric.unique_views || bookSortNumber(a.book.id)-bookSortNumber(b.book.id))
     .slice(0,3);
-  list.innerHTML = ranked.length ? ranked.map(({book,metric}) => `<button class="ranking-card" type="button" data-ranking-book="${escapeHtml(book.id)}"><span class="ranking-number">많이 읽음</span><span><strong>${escapeHtml(book.title)}</strong><small>조회 ${metric.unique_views} · 완독 ${metric.completions}</small></span><span class="ranking-score">점수 ${metric.ranking_score}</span></button>`).join("") : `<div class="all-available">아직 집계된 독서 기록이 없습니다.</div>`;
+  list.innerHTML = ranked.length ? ranked.map(({book,metric}, index) => `<button class="ranking-card" type="button" data-ranking-book="${escapeHtml(book.id)}"><span class="ranking-number">${index + 1}위 작품</span><span><strong>${escapeHtml(book.title)}</strong><small aria-label="고유 조회 ${metric.unique_views}, 완독 ${metric.completions}"><span class="ranking-view-icon" aria-hidden="true">👁</span> ${metric.unique_views} · 완독 ${metric.completions}</small></span><span class="ranking-score">독서 반응 ${metric.ranking_score}</span></button>`).join("") : `<div class="all-available">아직 집계된 독서 기록이 없습니다.</div>`;
   document.querySelectorAll("[data-ranking-book]").forEach((button) => button.addEventListener("click", () => openBook(button.dataset.rankingBook)));
 }
 
@@ -274,7 +405,7 @@ function engagementPanelMarkup(bookId) {
   const comments = engagementComments[bookId] || [];
   const commentsEnabled = engagementSettings[bookId]?.comments_enabled !== false;
   const commentItems = comments.length ? comments.slice(0,10).map((item) => `<li><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.reader_label || "승인 독자")} · ${new Date(item.created_at).toLocaleDateString("ko-KR")}</small></li>`).join("") : `<li class="comment-empty">아직 승인된 댓글이 없습니다.</li>`;
-  const form = session && commentsEnabled ? `<form class="comment-form" id="commentForm"><textarea id="commentBody" maxlength="300" placeholder="작품을 존중하는 댓글을 남겨 주세요." required></textarea><small>개인정보·연락처·외부 링크는 입력할 수 없으며 운영자 승인 후 공개됩니다.</small><p class="form-error" id="commentError" role="alert"></p><button type="submit">댓글 검토 요청</button></form>` : `<p class="comment-login-note">${commentsEnabled ? "댓글 작성은 승인된 로그인 사용자만 가능합니다." : "보호자 요청으로 댓글 기능이 꺼져 있습니다."}</p>`;
+  const form = session && commentsEnabled ? `<form class="comment-form" id="commentForm"><textarea id="commentBody" maxlength="300" placeholder="작품을 존중하는 댓글을 남겨 주세요." required></textarea><small>개인정보·연락처·외부 링크는 입력할 수 없으며 운영자 승인 후 공개됩니다.</small><p class="form-error" id="commentError" role="alert"></p><button type="submit">댓글 검토 요청</button></form>` : `<p class="comment-login-note">${commentsEnabled ? "댓글 작성 기능은 현재 준비 중입니다." : "보호자 요청으로 댓글 기능이 꺼져 있습니다."}</p>`;
   return `<div class="engagement-summary"><span id="detailViews">조회 ${metric.unique_views}</span><span id="detailCompletions">완독 ${metric.completions}</span><span>승인 댓글 ${comments.length}</span></div><section class="comments-panel"><h3>독자 댓글</h3><ul class="comment-list">${commentItems}</ul>${form}</section>`;
 }
 
@@ -583,8 +714,9 @@ async function loadWorkflowData(bookId) {
   ]);
   const firstError = episodesResult.error || suggestionsResult.error || reviewsResult.error;
   if (firstError && publishingSchemaMissing(firstError)) {
-    $("#workflowStatus").innerHTML = "<span class=\"workflow-warning\">Supabase SQL Editor에서 <strong>supabase/child-publishing.sql</strong>을 먼저 실행해야 신규 기능을 저장할 수 있습니다.</span>";
+    $("#workflowStatus").innerHTML = "<span class=\"workflow-warning\">Supabase SQL Editor에서 <strong>supabase/child-publishing.sql</strong>을 실행하기 전까지 안전 편집 Agent 결과는 이 브라우저 메모리에만 임시 저장됩니다.</span>";
     workflowEpisodes = []; workflowSuggestions = []; workflowReviews = [];
+    workflowSuggestionStorage = "local";
   } else if (firstError) {
     $("#workflowStatus").textContent = "작품 작업 데이터를 불러오지 못했습니다.";
     console.error(firstError);
@@ -592,6 +724,7 @@ async function loadWorkflowData(bookId) {
     workflowEpisodes = episodesResult.data || [];
     workflowSuggestions = suggestionsResult.data || [];
     workflowReviews = reviewsResult.data || [];
+    workflowSuggestionStorage = "remote";
     $("#workflowStatus").textContent = "AI 결과는 초안이며 보호자 승인 전에는 공개되지 않습니다.";
   }
   renderEpisodes(); renderSuggestions(); renderReviews();
@@ -648,7 +781,45 @@ async function deleteEpisode(id) {
 }
 
 function renderSuggestions() {
-  $("#suggestionList").innerHTML = workflowSuggestions.length ? workflowSuggestions.map((item) => `<div class="workflow-row"><div><span class="status-chip">${escapeHtml(item.suggestion_type)} · ${escapeHtml(item.status)}</span><pre>${escapeHtml(item.output_text)}</pre><small>${new Date(item.created_at).toLocaleString("ko-KR")}</small></div></div>`).join("") : `<div class="all-available">생성된 AI 초안이 없습니다.</div>`;
+  $("#suggestionList").innerHTML = workflowSuggestions.length ? workflowSuggestions.map((item) => {
+    const output = window.BingoEditingAgent?.parse(item.output_text);
+    const structured = output?.schemaVersion === window.BingoEditingAgent?.SCHEMA_VERSION;
+    const resultMarkup = structured
+      ? `<div class="agent-result">
+          <p class="agent-summary">${escapeHtml(output.result.summary)}</p>
+          <p class="agent-original"><strong>보존된 원문</strong><span>${escapeHtml(output.input.originalText)}</span></p>
+          ${output.result.suggestions.length ? `<ol>${output.result.suggestions.map((suggestion) => `<li><strong>${escapeHtml(suggestion.reason)}</strong><del>${escapeHtml(suggestion.original)}</del><ins>${escapeHtml(suggestion.replacement)}</ins></li>`).join("")}</ol>` : ""}
+          <small>실행 ${escapeHtml(output.runId)} · 검증 ${output.validation.valid ? "통과" : "실패"} · 사람 승인 필수</small>
+        </div>`
+      : `<pre>${escapeHtml(item.output_text)}</pre>`;
+    const actions = item.status === "draft" || item.status === "revised"
+      ? `<div class="suggestion-actions"><button type="button" class="reject-suggestion" data-suggestion-status="rejected" data-suggestion-id="${escapeHtml(item.id)}">거절</button><button type="button" class="accept-suggestion" data-suggestion-status="accepted" data-suggestion-id="${escapeHtml(item.id)}">채택</button></div>`
+      : "";
+    return `<article class="workflow-row suggestion-row"><div><span class="status-chip">편집 제안 · ${escapeHtml(item.status)}</span>${resultMarkup}<small>${new Date(item.created_at).toLocaleString("ko-KR")}</small></div>${actions}</article>`;
+  }).join("") : `<div class="all-available">생성된 편집 제안이 없습니다.</div>`;
+  document.querySelectorAll("[data-suggestion-status]").forEach((button) => button.addEventListener("click", () => setSuggestionStatus(button.dataset.suggestionId, button.dataset.suggestionStatus)));
+}
+
+async function setSuggestionStatus(id, status) {
+  if (!session) { $("#agentError").textContent = "운영자 로그인 후 제안을 검토할 수 있습니다."; return; }
+  const reviewedAt = new Date().toISOString();
+  if (workflowSuggestionStorage === "local" || String(id).startsWith("local-agent-")) {
+    const index = workflowSuggestions.findIndex((item) => String(item.id) === String(id));
+    if (index >= 0) workflowSuggestions[index] = { ...workflowSuggestions[index], status, reviewed_at:reviewedAt };
+    renderSuggestions();
+    showToast(status === "accepted" ? "임시 편집 제안을 채택했습니다. 원문은 그대로 보존됩니다." : "임시 편집 제안을 거절했습니다.");
+    return;
+  }
+  const { data, error } = await db.from("ai_suggestions").update({ status, reviewed_at:reviewedAt }).eq("id", id).select().single();
+  if (error) {
+    $("#agentError").textContent = "제안 검토 상태를 저장하지 못했습니다.";
+    console.error(error);
+    return;
+  }
+  const index = workflowSuggestions.findIndex((item) => String(item.id) === String(id));
+  if (index >= 0) workflowSuggestions[index] = data;
+  renderSuggestions();
+  showToast(status === "accepted" ? "편집 제안을 채택했습니다. 원문은 그대로 보존됩니다." : "편집 제안을 거절했습니다.");
 }
 
 async function generateSuggestion(event) {
@@ -659,18 +830,35 @@ async function generateSuggestion(event) {
   errorElement.textContent = "";
   button.disabled = true; button.textContent = "초안 생성 중…";
   try {
-    const request = { bookId:$("#workflowBookId").value, episodeId:$("#agentEpisode").value || null, type:$("#agentType").value, inputText };
-    const { data, error } = await db.functions.invoke("generate-book-content", { body:request });
-    if (error) throw error;
-    const outputText = data?.outputText?.trim();
-    if (!outputText) throw new Error("AI 응답이 비어 있습니다.");
-    const { data:saved, error:saveError } = await db.from("ai_suggestions").insert({ book_id:request.bookId, episode_id:request.episodeId, suggestion_type:request.type, source_version:new Date().toISOString(), input_text:inputText, output_text:outputText, status:"draft" }).select().single();
-    if (saveError) throw saveError;
-    workflowSuggestions.unshift(saved); renderSuggestions(); showToast("AI 초안을 생성했습니다. 공개 전 반드시 검토하세요.");
+    const bookId = $("#workflowBookId").value;
+    const book = books.find((item) => item.id === bookId);
+    if (!book || !isSynthetic(book)) throw new Error("실제 어린이 자료에서는 안전 데모 Agent를 실행할 수 없습니다.");
+    if (!window.BingoEditingAgent) throw new Error("편집 Agent 모듈을 불러오지 못했습니다.");
+    const sourceVersion = `synthetic-${bookId}-${new Date().toISOString()}`;
+    const request = { bookId, episodeId:$("#agentEpisode").value || null, type:$("#agentType").value, inputText, sourceScope:"synthetic-demo", sourceVersion };
+    const output = window.BingoEditingAgent.run(request);
+    const outputText = JSON.stringify(output);
+    const insertPayload = { book_id:request.bookId, episode_id:request.episodeId, suggestion_type:request.type, source_version:sourceVersion, input_text:inputText, output_text:outputText, status:"draft" };
+    let saved;
+    if (workflowSuggestionStorage === "local") {
+      saved = { ...insertPayload, id:`local-agent-${Date.now()}`, created_at:new Date().toISOString(), reviewed_at:null };
+    } else {
+      const { data, error:saveError } = await db.from("ai_suggestions").insert(insertPayload).select().single();
+      if (saveError && publishingSchemaMissing(saveError)) {
+        workflowSuggestionStorage = "local";
+        saved = { ...insertPayload, id:`local-agent-${Date.now()}`, created_at:new Date().toISOString(), reviewed_at:null };
+        $("#workflowStatus").innerHTML = "<span class=\"workflow-warning\">원격 테이블을 찾지 못해 Agent 결과를 이 브라우저 메모리에 임시 저장합니다.</span>";
+      } else if (saveError) {
+        throw saveError;
+      } else {
+        saved = data;
+      }
+    }
+    workflowSuggestions.unshift(saved); renderSuggestions(); showToast("합성 원문의 편집 제안을 만들었습니다. 채택 또는 거절해 주세요.");
   } catch (error) {
-    errorElement.textContent = "AI 초안을 생성하지 못했습니다. Edge Function과 Secret 설정을 확인해 주세요.";
+    errorElement.textContent = error?.message || "편집 제안을 생성하지 못했습니다.";
     console.error(error);
-  } finally { button.disabled = false; button.textContent = "AI 초안 생성"; }
+  } finally { button.disabled = false; button.textContent = "안전 편집 제안 생성"; }
 }
 
 function renderReviews() {
@@ -712,19 +900,6 @@ async function requestWorkflowChanges() {
   } catch (error) { $("#reviewError").textContent = "수정 요청을 저장하지 못했습니다."; console.error(error); }
 }
 
-async function login(event) {
-  event.preventDefault();
-  const button = $("#loginButton");
-  button.disabled = true;
-  $("#loginError").textContent = "";
-  const { error } = await db.auth.signInWithPassword({ email: OPERATOR_EMAIL, password: $("#loginPassword").value });
-  button.disabled = false;
-  if (error) { $("#loginError").textContent = "관리자 비밀번호를 확인해 주세요."; return; }
-  $("#loginPassword").value = "";
-  $("#loginDialog").close();
-  showToast("운영자로 로그인했습니다.");
-}
-
 async function logout() {
   await db.auth.signOut();
   $("#manageDialog").close();
@@ -737,9 +912,8 @@ function showToast(message) {
 }
 
 $("#searchInput").addEventListener("input", (event) => { query = event.target.value.trim(); renderBooks(); });
-document.querySelectorAll(".filter").forEach((button) => button.addEventListener("click", () => { document.querySelectorAll(".filter").forEach((item) => item.classList.remove("active")); button.classList.add("active"); filter = button.dataset.filter; renderBooks(); }));
-$("#manageButton").addEventListener("click", () => { if (!session) { $("#loginDialog").showModal(); return; } renderManagement(); $("#manageDialog").showModal(); });
-$("#loginForm").addEventListener("submit", login);
+document.querySelectorAll("[data-primary-tab]").forEach((button) => button.addEventListener("click", () => setPrimaryTab(button.dataset.primaryTab)));
+$("#myAuthorSelect").addEventListener("change", async (event) => { activeAuthorAlias = event.target.value; authorDashboard = null; authorDashboardMode = "loading"; renderMyDashboard(); await refreshAuthorDashboard(); });
 $("#addBookForm").addEventListener("submit", addBook);
 $("#editBookForm").addEventListener("submit", editBook);
 $("#publishingForm").addEventListener("submit", savePublishingMetadata);
@@ -751,7 +925,7 @@ document.querySelectorAll(".workflow-tab").forEach((button) => button.addEventLi
 $("#logoutButton").addEventListener("click", logout);
 $("#resetAllButton").addEventListener("click", async () => { if (!confirm("모든 책을 ‘대여 가능’으로 바꿀까요?")) return; const { error } = await db.from("books").update({ status:"available", borrowed_at:null, updated_at:new Date().toISOString() }).eq("status", "borrowed"); showToast(error ? "초기화에 실패했습니다." : "모든 대여 상태를 초기화했어요."); });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
-["bookDialog","manageDialog","editBookDialog","workflowDialog","loginDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
+["bookDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
 
 $("#fullscreenButton").addEventListener("click", async () => {
   try {
@@ -769,21 +943,24 @@ function startHeroBanner() {
   window.setInterval(() => {
     slides[active].classList.remove("active");
     slides[active].setAttribute("aria-hidden", "true");
+    if (slides[active].tagName === "BUTTON") slides[active].tabIndex = -1;
     dots[active]?.classList.remove("active");
     active = (active + 1) % slides.length;
     slides[active].classList.add("active");
     slides[active].removeAttribute("aria-hidden");
+    if (slides[active].tagName === "BUTTON") slides[active].tabIndex = 0;
     dots[active]?.classList.add("active");
   }, 4500);
 }
 
-db.auth.onAuthStateChange(async (_event, nextSession) => { session = nextSession; updateAuthUi(); await loadEngagement(); renderBooks(); });
+db.auth.onAuthStateChange(async (_event, nextSession) => { session = nextSession; updateAuthUi(); await loadEngagement(); if (session) await refreshAuthorDashboard(); renderBooks(); });
 db.channel("books-status").on("postgres_changes", { event:"*", schema:"public", table:"books" }, async () => { await loadBooks(); if ($("#manageDialog").open) renderManagement(); }).subscribe((status) => { if (status === "SUBSCRIBED") setSyncStatus("실시간 연결", "online"); });
 db.channel("book-engagement")
-  .on("postgres_changes", { event:"*", schema:"public", table:"book_comments" }, async () => { await loadEngagement(); renderBooks(); if ($("#manageDialog").open) loadModerationComments(); })
-  .on("postgres_changes", { event:"*", schema:"public", table:"book_metrics_daily" }, async () => { await loadEngagement(); renderBooks(); })
+  .on("postgres_changes", { event:"*", schema:"public", table:"book_comments" }, async () => { await loadEngagement(); if (session) await refreshAuthorDashboard(); renderBooks(); if ($("#manageDialog").open) loadModerationComments(); })
+  .on("postgres_changes", { event:"*", schema:"public", table:"book_metrics_daily" }, async () => { await loadEngagement(); if (session) await refreshAuthorDashboard(); renderBooks(); })
   .subscribe();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
 
 startHeroBanner();
+setPrimaryTab(location.hash === "#my" ? "my" : "home");
 loadBooks();
