@@ -68,7 +68,7 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .ocr-draft-panel .ocr-quality-warning { padding:.65rem .75rem; border-radius:10px; color:#8a3d2f; background:#fff0eb; font-weight:800; }
 .page-viewer { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:1rem; }
 .page-viewer figure { min-width:0; margin:0; text-align:center; }
-.image-pan { max-width:100%; padding:1rem; overflow:auto; border-radius:16px; background:#eef3f1; cursor:grab; overscroll-behavior:contain; touch-action:pan-x pan-y; }
+.image-pan { position:relative; max-width:100%; padding:1rem; overflow:auto; border-radius:16px; background:#eef3f1; cursor:grab; overscroll-behavior:contain; touch-action:pan-x pan-y; }
 .image-pan.dragging { cursor:grabbing; user-select:none; }
 .crop-stage { position:relative; width:100%; margin:auto; overflow:hidden; border-radius:14px; }
 .page-viewer img { display:block; width:100%; max-width:none; height:auto; max-height:none; margin:auto; border-radius:14px; box-shadow:0 8px 28px #173b3424; background:#eee; transform-origin:top center; }
@@ -82,10 +82,18 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .page-viewer figcaption { margin-top:.8rem; color:#60736e; font-weight:700; }
 .page-nav { width:48px; height:48px; min-width:48px; border:1px solid var(--line); border-radius:50%; background:white; color:var(--green); font-size:2rem; cursor:pointer; }
 .page-nav:disabled { opacity:.35; cursor:not-allowed; }
-#pageStage.page-turn-next .crop-stage { transform-origin:left center; animation:readerPageNext .36s ease-out; }
-#pageStage.page-turn-previous .crop-stage { transform-origin:right center; animation:readerPagePrevious .36s ease-out; }
-@keyframes readerPageNext { from { opacity:.35; transform:rotateY(-10deg) translateX(2%); } to { opacity:1; transform:rotateY(0) translateX(0); } }
-@keyframes readerPagePrevious { from { opacity:.35; transform:rotateY(10deg) translateX(-2%); } to { opacity:1; transform:rotateY(0) translateX(0); } }
+#pageStage { position:relative; perspective:1600px; }
+#pageStage .crop-stage { backface-visibility:hidden; transform-style:preserve-3d; will-change:transform,opacity,filter; }
+#pageStage.page-turn-next .crop-stage { animation:readerPageNext .38s ease-out; }
+#pageStage.page-turn-previous .crop-stage { animation:readerPagePrevious .38s ease-out; }
+.page-turn-leaf { position:absolute; inset:0; z-index:5; display:grid; place-items:center; overflow:hidden; background:#101513; backface-visibility:hidden; pointer-events:none; transform-style:preserve-3d; }
+.page-turn-leaf img { display:block; width:auto; max-width:100%; height:100%; max-height:100%; object-fit:contain; border:0; border-radius:0; box-shadow:none; }
+.page-turn-leaf-next { transform-origin:left center; animation:readerLeafNext .5s cubic-bezier(.42,0,.3,1); }
+.page-turn-leaf-previous { transform-origin:right center; animation:readerLeafPrevious .5s cubic-bezier(.42,0,.3,1); }
+@keyframes readerPageNext { from { opacity:.58; transform:translateX(1.5%); } to { opacity:1; transform:translateX(0); } }
+@keyframes readerPagePrevious { from { opacity:.58; transform:translateX(-1.5%); } to { opacity:1; transform:translateX(0); } }
+@keyframes readerLeafNext { from { opacity:1; transform:rotateY(0); filter:brightness(1); box-shadow:none; } to { opacity:0; transform:rotateY(-58deg) translateX(-3%); filter:brightness(.8); box-shadow:-16px 6px 24px #06181352; } }
+@keyframes readerLeafPrevious { from { opacity:1; transform:rotateY(0); filter:brightness(1); box-shadow:none; } to { opacity:0; transform:rotateY(58deg) translateX(3%); filter:brightness(.8); box-shadow:16px 6px 24px #06181352; } }
 .webtoon-viewer { max-width:760px; margin:auto; }
 .episode-reader-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; padding:1rem; border:1px solid var(--line); border-radius:18px; background:#fbfdfc; }
 .episode-reader-head h3 { margin:.3rem 0; font-size:1.5rem; }

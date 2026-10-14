@@ -426,9 +426,18 @@ function openPublicEpisode(index) {
   $("#closeWorkspace").textContent = "회차 목록";
   document.title = `${selectedWork.title} · ${selectedWork.episodes[index][0]}화`;
   showTab("pages");
-  setReaderMode("continuous");
+  setReaderMode("single");
+  showPage(selectedPage);
   const fullscreenRequest = $("#workspace").requestFullscreen?.();
   fullscreenRequest?.catch(() => {});
+}
+
+function activePageBounds() {
+  if (readerOnlyMode && publicEpisodeActive && selectedWork?.episodes[selectedEpisode]) {
+    const [, ,start,end] = selectedWork.episodes[selectedEpisode];
+    return { min:start-1, max:end-1 };
+  }
+  return { min:0, max:Math.max((selectedWork?.count || 1)-1,0) };
 }
 
 function enterEpisodeFullscreen() {
@@ -483,7 +492,7 @@ function stopAutoTurn() {
 
 function scheduleAutoTurn() {
   window.clearTimeout(autoTurnTimer);
-  if (!autoTurnEnabled || readerMode !== "single" || !selectedWork || selectedPage >= selectedWork.count - 1) return;
+  if (!autoTurnEnabled || readerMode !== "single" || !selectedWork || selectedPage >= activePageBounds().max) return;
   autoTurnTimer = window.setTimeout(() => showPage(selectedPage + 1),5000);
 }
 
@@ -512,10 +521,27 @@ function openWork(index) {
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
+function createPageTurnLeaf(direction) {
+  const source = $("#pageImage").currentSrc || $("#pageImage").src;
+  if (!readerOnlyMode || !source) return;
+  $("#imagePan").querySelector(".page-turn-leaf")?.remove();
+  const leaf = document.createElement("span");
+  const image = document.createElement("img");
+  leaf.className = `page-turn-leaf page-turn-leaf-${direction}`;
+  leaf.setAttribute("aria-hidden","true");
+  image.src = source;
+  image.alt = "";
+  leaf.append(image);
+  $("#imagePan").append(leaf);
+  leaf.addEventListener("animationend",() => leaf.remove(),{once:true});
+}
+
 function showPage(index) {
   if (!selectedWork) return;
+  const bounds = activePageBounds();
   const previousPage = selectedPage;
-  selectedPage = Math.min(Math.max(index,0),selectedWork.count-1);
+  selectedPage = Math.min(Math.max(index,bounds.min),bounds.max);
+  if (selectedPage !== previousPage) createPageTurnLeaf(selectedPage < previousPage ? "previous" : "next");
   const stage = $("#pageStage");
   stage.classList.remove("page-turn-next","page-turn-previous");
   void stage.offsetWidth;
@@ -525,9 +551,9 @@ function showPage(index) {
   $("#pageImage").alt = `${selectedWork.title} ${selectedPage+1}쪽`;
   $("#pageCaption").textContent = `${selectedPage+1} / ${selectedWork.count}쪽 · ${fileName(selectedWork,selectedPage)}`;
   $("#readerLocation").textContent = `${temporaryEpisodeLabel(selectedWork,selectedPage+1)} · ${selectedPage+1}/${selectedWork.count}쪽`;
-  $("#previousPage").disabled = selectedPage === 0;
-  $("#nextPage").disabled = selectedPage === selectedWork.count-1;
-  if (selectedPage === selectedWork.count-1) $("#readerMessage").textContent = "마지막 페이지";
+  $("#previousPage").disabled = selectedPage === bounds.min;
+  $("#nextPage").disabled = selectedPage === bounds.max;
+  if (selectedPage === bounds.max) $("#readerMessage").textContent = readerOnlyMode && publicEpisodeActive ? "이번 회차의 마지막 페이지" : "마지막 페이지";
   document.querySelectorAll("[data-page]").forEach((button) => button.classList.toggle("active",Number(button.dataset.page) === selectedPage));
   document.querySelector(`[data-page="${selectedPage}"]`)?.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   localStorage.setItem(progressKey(selectedWork),String(selectedPage));
@@ -536,7 +562,7 @@ function showPage(index) {
   applyZoom();
   loadOcrPageDraft();
   loadAgentPageDraft();
-  if (selectedPage === selectedWork.count-1 && autoTurnEnabled) stopAutoTurn();
+  if (selectedPage === bounds.max && autoTurnEnabled) stopAutoTurn();
   scheduleAutoTurn();
 }
 
@@ -949,6 +975,26 @@ function addImageStatusHandlers(image) {
   image.addEventListener("error",() => { $("#readerMessage").textContent = "이미지를 불러오지 못했습니다. 파일 경로와 로컬 서버를 확인하세요."; });
 }
 
+function setupReaderSwipe() {
+  const stage = $("#pageStage");
+  let startX = 0;
+  let startY = 0;
+  stage.addEventListener("pointerdown",(event) => {
+    if (!readerOnlyMode || readerMode !== "single" || event.pointerType === "mouse") return;
+    startX = event.clientX;
+    startY = event.clientY;
+  });
+  stage.addEventListener("pointerup",(event) => {
+    if (!readerOnlyMode || readerMode !== "single" || event.pointerType === "mouse" || !startX) return;
+    const deltaX = event.clientX-startX;
+    const deltaY = event.clientY-startY;
+    startX = 0;
+    startY = 0;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY)*1.2) return;
+    showPage(selectedPage + (deltaX < 0 ? 1 : -1));
+  });
+}
+
 function setupPanControls() {
   const pan = $("#imagePan");
   let active = false;
@@ -1163,7 +1209,11 @@ async function initializeEditor() {
   renderCards();
   const requestedWorkValue = pageParams.get("work");
   const requestedWork = requestedWorkValue === null ? null : Number(requestedWorkValue);
-  if (Number.isInteger(requestedWork) && requestedWork >= 0 && requestedWork < works.length) openWork(requestedWork);
+  if (Number.isInteger(requestedWork) && requestedWork >= 0 && requestedWork < works.length) {
+    openWork(requestedWork);
+    const requestedTab = pageParams.get("tab");
+    if (!readerOnlyMode && ["pages","materials","review"].includes(requestedTab)) showTab(requestedTab);
+  }
 }
 
 initializeEditor();
@@ -1234,6 +1284,7 @@ $("#readerFullscreenButton").addEventListener("click",async () => {
 addImageStatusHandlers($("#pageImage"));
 setupPanControls();
 setupCropControls();
+setupReaderSwipe();
 document.addEventListener("keydown",(event) => {
   if (!selectedWork || $("#workspace").hidden || event.target.matches("input,textarea,select")) return;
   if (!document.querySelector('[data-panel="materials"]').hidden) {

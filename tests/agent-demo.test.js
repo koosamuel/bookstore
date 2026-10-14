@@ -138,6 +138,8 @@ test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
   assert.match(html, /data-tab="materials">발표자료/);
+  assert.match(js, /pageParams\.get\("tab"\)/);
+  assert.match(js, /\["pages","materials","review"\]\.includes\(requestedTab\)/);
   assert.match(html, /id="presentationFileInput"/);
   assert.match(html, /05_과제제안서\.md/);
   assert.match(js, /presentation-files/);
@@ -219,7 +221,7 @@ test("홈 화면에는 중복 우수 작가 영역 없이 상단 우수작품 �
   assert.doesNotMatch(html, /실제 작품으로 먼저 체험해 보세요/);
   assert.doesNotMatch(html, /데모 전체 보기/);
   assert.match(html, /class="demo-preview-card"/);
-  assert.match(html, /<h2 id="catalogTitle">자동 생성 도서<\/h2>/);
+  assert.match(html, /<h2 id="catalogTitle">글로 만드는 AI 그림동화<\/h2>/);
   assert.match(html, /class="section-heading catalog-heading"/);
   assert.doesNotMatch(html, /SYNTHETIC DATA · 가상 자료/);
   assert.doesNotMatch(html, /id="bookCount"/);

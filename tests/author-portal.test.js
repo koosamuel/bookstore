@@ -13,12 +13,14 @@ test("홈·마이 탭과 작가 별칭 선택 UI를 제공한다", () => {
   assert.match(html, /data-primary-tab="my"/);
   assert.match(html, /id="myAuthorSelect"/);
   assert.match(html, /실명·학년·반 없이/);
+  assert.match(html, /tab=materials&amp;v=23"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
 });
 
 test("전체 화면은 모바일 우선 레이아웃과 하단 탭을 기본으로 사용한다", () => {
   const css = read("styles.css");
   assert.match(css, /Mobile-first layout/);
   assert.match(css, /\.primary-tabs\s*\{[^}]*position:fixed;[^}]*inset:auto 0 0/s);
+  assert.match(css, /grid-template-columns:repeat\(4,1fr\)/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /@media \(min-width:768px\)/);
   assert.doesNotMatch(css, /@media \(max-width:760px\)/);
@@ -89,6 +91,9 @@ test("홈 작품은 회차 목록을 거쳐 전체화면으로 읽고, 편집 �
   assert.match(demoHtml, /id="publicEpisodeList"/);
   assert.match(demo, /function renderPublicEpisodeBrowser/);
   assert.match(demo, /function openPublicEpisode/);
+  assert.match(demo, /function activePageBounds/);
+  assert.match(demo, /function setupReaderSwipe/);
+  assert.match(demo, /function createPageTurnLeaf/);
   assert.match(demo, /episodeScopedReader/);
   assert.match(demoCss, /body\.episode-index/);
   assert.match(demo, /selectedWork\.count/);
@@ -118,6 +123,9 @@ test("그림책은 한 페이지 맞춤·책장 전환·자동 넘김을 제공�
   assert.match(demoHtml, /id="autoTurnButton"/);
   assert.match(demo, /scheduleAutoTurn/);
   assert.match(demoCss, /body\.reader-only \.page-viewer \{[^}]*height:calc\(100dvh/s);
+  assert.match(demoCss, /@keyframes readerPageNext/);
+  assert.match(demoCss, /@keyframes readerLeafNext/);
+  assert.match(demoCss, /rotateY\(-58deg\)/);
 });
 
 test("댓글은 악플·위협·개인정보를 등록 전과 서버에서 중복 점검한다", () => {
