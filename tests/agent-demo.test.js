@@ -52,6 +52,8 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(html, /data-tab="pages">읽기·편집/);
   assert.doesNotMatch(html, /data-tab="agent"/);
   assert.ok(html.indexOf('data-tab="episodes"') < html.indexOf('data-tab="pages"'));
+  assert.match(html, /class="active" type="button" data-tab="episodes">회차/);
+  assert.match(html, /class="panel active" data-panel="episodes"/);
   assert.match(html, /class="reading-editing-grid"/);
   assert.match(html, /class="reader-controls"/);
   assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="reading-column"'));
@@ -62,6 +64,13 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /sourceScope:"actual-local-review"/);
   assert.match(js, /localOnly:true/);
   assert.match(js, /data-agent-suggestion/);
+  assert.match(js, /showTab\("episodes"\)/);
+  assert.match(js, /data-episode-start/);
+  assert.match(js, /episode-copy/);
+  assert.match(js, /function enterEpisodeFullscreen/);
+  assert.match(js, /classList\.add\("reader-only"\)/);
+  assert.match(js, /requestFullscreen/);
+  assert.match(js, /회차 목록/);
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);
   assert.match(html, /<h1>작품 편집<\/h1>/);
   assert.match(html, /id="setCurrentCoverButton"/);

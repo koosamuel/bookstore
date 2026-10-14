@@ -36,6 +36,7 @@ let ocrRunning = false;
 let editorSession = null;
 let selectedCoverPage = 1;
 let editorSchemaReady = false;
+let episodeFullscreenMode = false;
 const KOREAN_OCR_MIN_CONFIDENCE = 40;
 const KOREAN_OCR_MIN_RATIO = .25;
 const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
@@ -176,6 +177,28 @@ function renderCards() {
   document.querySelectorAll("[data-open-work]").forEach((button) => button.addEventListener("click", () => openWork(Number(button.dataset.openWork))));
 }
 
+function enterEpisodeFullscreen() {
+  episodeFullscreenMode = true;
+  document.body.classList.add("reader-only");
+  document.title = `${selectedWork.title} · ${selectedWork.episodes[selectedEpisode][0]}화`;
+  $("#closeWorkspace").textContent = "회차 목록";
+  showTab("pages");
+  setReaderMode("continuous");
+  const fullscreenRequest = $("#workspace").requestFullscreen?.();
+  fullscreenRequest?.catch(() => { $("#readerMessage").textContent = "화면 전체 보기로 열었습니다."; });
+}
+
+function leaveEpisodeFullscreen({ exitBrowserFullscreen = true } = {}) {
+  if (!episodeFullscreenMode) return;
+  episodeFullscreenMode = false;
+  document.body.classList.remove("reader-only");
+  document.title = "빙고서점 · 작품 편집";
+  $("#closeWorkspace").textContent = "다른 작품";
+  showTab("episodes");
+  if (exitBrowserFullscreen && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
 function openWork(index) {
   selectedWork = works[index];
   selectedCoverPage = Number(draftFor(selectedWork)?.cover_page || 1);
@@ -184,15 +207,19 @@ function openWork(index) {
   selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
   $("#demoGrid").hidden = true; $("#workspace").hidden = false;
   $("#workTitle").textContent = selectedWork.title;
-  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}"><strong>${number}화</strong><span><strong>${title}</strong><br><small>${start}~${end}쪽</small></span></button>`).join("");
+  $("#episodeCount").textContent = `총 ${selectedWork.episodes.length}화`;
+  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}" aria-label="${number}화 ${escapeHtml(title)} 열기">
+    <img src="${imagePath(selectedWork,start-1)}" alt="" loading="lazy" />
+    <span class="episode-copy"><strong>${number}화 · ${escapeHtml(title)}</strong><small>${start}~${end}쪽</small></span>
+    <span class="episode-open">열기</span>
+  </button>`).join("");
   $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${selectedWork.notice}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p>`;
   $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
   document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
   document.querySelectorAll("[data-episode-start]").forEach((button) => button.addEventListener("click", () => {
     selectedEpisode = selectedWork.episodes.findIndex((episode) => episode[2] === Number(button.dataset.episodeStart));
     selectedPage = Number(button.dataset.episodeStart) - 1;
-    showTab("pages");
-    setReaderMode("continuous");
+    enterEpisodeFullscreen();
   }));
   if (readerOnlyMode) {
     document.body.classList.add("reader-only");
@@ -202,7 +229,7 @@ function openWork(index) {
     setReaderMode("continuous");
   } else {
     renderContinuousReader();
-    setReaderMode("single"); setZoom(1); showTab("pages"); showPage(selectedPage);
+    setReaderMode("single"); setZoom(1); showPage(selectedPage); showTab("episodes");
     renderPublishingEditor();
   }
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
@@ -631,6 +658,7 @@ document.addEventListener("keydown",(event) => {
   if (event.key === "2") setReaderMode("continuous");
 });
 $("#closeWorkspace").addEventListener("click",() => {
+  if (episodeFullscreenMode) { leaveEpisodeFullscreen(); return; }
   if (readerOnlyMode) { window.location.href = "./index.html#home"; return; }
   $("#workspace").hidden = true; $("#demoGrid").hidden = false; window.scrollTo({top:0,behavior:"smooth"});
 });

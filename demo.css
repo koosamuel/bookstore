@@ -84,11 +84,17 @@ main { width:min(1180px,92vw); margin:1.25rem auto 5rem; }
 .thumbnail-strip img { width:100%; height:100%; object-fit:cover; }
 .thumbnail-strip small { position:absolute; right:3px; bottom:3px; min-width:23px; padding:2px 4px; border-radius:7px; background:#173b34df; color:white; font-size:.7rem; }
 .section-help { color:#60736e; }
+.episode-list-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.8rem; padding:.9rem 1rem; border-radius:14px; background:var(--mint); }
+.episode-list-head strong { font-size:1.1rem; }
+.episode-list-head span { color:#536d66; }
 .episode-list { display:grid; gap:.8rem; }
-.episode { display:grid; grid-template-columns:70px 1fr auto; gap:1rem; align-items:center; width:100%; padding:1rem; border:1px solid var(--line); border-radius:18px; background:#fbfdfc; color:var(--ink); text-align:left; cursor:pointer; }
-.episode strong { font-size:1.1rem; }
-.episode small { color:#6b7d78; }
-.episode .status { padding:.35rem .6rem; border-radius:999px; background:var(--warn); color:#6f5812; font-size:.75rem; font-weight:800; }
+.episode { display:grid; grid-template-columns:120px minmax(0,1fr) auto; gap:1rem; align-items:center; width:100%; min-height:112px; padding:.75rem; border:1px solid var(--line); border-radius:18px; background:#fbfdfc; color:var(--ink); text-align:left; cursor:pointer; }
+.episode:hover { border-color:#8fbbae; background:#f4fbf8; }
+.episode img { width:120px; aspect-ratio:4/3; object-fit:cover; object-position:center top; border-radius:12px; background:#eef3f1; }
+.episode-copy { display:grid; gap:.45rem; min-width:0; }
+.episode-copy strong { font-size:1.1rem; }
+.episode-copy small { color:#6b7d78; }
+.episode-open { padding:.5rem .7rem; border-radius:999px; color:var(--green); background:var(--mint); font-size:.8rem; font-weight:900; }
 .publishing-editor { display:grid; grid-template-columns:minmax(220px,320px) minmax(0,1fr); gap:1rem; }
 .cover-editor,.script-editor { display:grid; gap:.8rem; padding:1rem; border:1px solid var(--line); border-radius:18px; background:#fbfdfc; }
 .cover-editor h3,.script-editor strong { margin:0; font-size:1.2rem; }
@@ -188,9 +194,12 @@ body.reader-only .continuous-page figcaption { margin:0; padding:7px 10px; color
   .episode-navigation button { min-height:46px; border-radius:10px; font-size:15px; }
   .transcript-note { margin:.7rem 0; padding:.75rem .8rem; border-radius:12px; font-size:.82rem; }
   .episode-list { gap:.55rem; }
-  .episode { grid-template-columns:48px 1fr auto; gap:.6rem; padding:.75rem; border-radius:13px; }
-  .episode strong { font-size:.95rem; }
-  .episode small,.episode .status { font-size:.7rem; }
+  .episode-list-head { align-items:flex-start; flex-direction:column; gap:.25rem; padding:.75rem; border-radius:12px; }
+  .episode-list-head span { font-size:.75rem; }
+  .episode { grid-template-columns:88px minmax(0,1fr) auto; gap:.65rem; min-height:88px; padding:.55rem; border-radius:13px; }
+  .episode img { width:88px; border-radius:9px; }
+  .episode-copy strong { font-size:.9rem; }
+  .episode-copy small,.episode-open { font-size:.7rem; }
   .publishing-editor { grid-template-columns:1fr; }
   .script-editor textarea { min-height:260px; }
   .server-save-row { align-items:stretch; flex-direction:column; padding:.8rem; }
