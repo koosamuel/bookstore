@@ -17,6 +17,7 @@ done
 mkdir -p "$STAGING_DIR/assets" "$STAGING_DIR/.openai"
 cp "$PROJECT_DIR/assets/school-logo.png" "$STAGING_DIR/assets/school-logo.png"
 cp -R "$PROJECT_DIR/assets/web" "$STAGING_DIR/assets/web"
+cp -R "$PROJECT_DIR/bookstore" "$STAGING_DIR/bookstore"
 cp "$PROJECT_DIR/.openai/hosting.json" "$STAGING_DIR/.openai/hosting.json"
 
 rm -rf "$OUTPUT_DIR"

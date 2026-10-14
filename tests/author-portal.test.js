@@ -40,6 +40,13 @@ test("서버 API 모듈은 앱보다 먼저 로드되고 정적 배포에 포함
   assert.match(read("sw.js"), /server-api\.js/);
 });
 
+test("중복된 bookstore 경로는 실제 배포 홈으로 연결한다", () => {
+  const redirect = read("bookstore/index.html");
+  assert.match(redirect, /new URL\("\.\.\/", window\.location\.href\)/);
+  assert.match(redirect, /window\.location\.replace/);
+  assert.match(read("scripts/build-static.sh"), /PROJECT_DIR\/bookstore/);
+});
+
 test("공개 홈 API 응답은 작품 지표만 정규화한다", () => {
   const result = apiModule.normalizeHomeFeed({ generated_at:"2026-10-13T01:00:00Z", rankings:[{ book_id:"B001", title:"작품", unique_views:"7", completions:"2", approved_cheers:"1", ranking_score:"11" }] });
   assert.deepEqual(result.rankings[0], { bookId:"B001", title:"작품", coverUrl:null, uniqueViews:7, completions:2, approvedCheers:1, rankingScore:11 });

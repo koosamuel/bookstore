@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="0; url=../">
+  <link rel="canonical" href="../">
+  <title>빙고서점으로 이동 중</title>
+</head>
+<body>
+  <p><a href="../">빙고서점으로 이동</a></p>
+  <script>
+    (() => {
+      const target = new URL("../", window.location.href);
+      target.search = window.location.search;
+      target.hash = window.location.hash || "#home";
+      window.location.replace(target.href);
+    })();
+  </script>
+</body>
+</html>
