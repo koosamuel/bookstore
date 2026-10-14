@@ -57,6 +57,7 @@ supabase/child-publishing.sql
 
 - `books`의 장르·키워드·페이지 수·동의·공개 상태
 - `book_episodes`, `book_pages`, `ai_suggestions`, `publication_reviews`, `publication_assets`
+- `work_editor_drafts`: 실제 작품 편집 화면의 표지 페이지와 작품 전체 대본
 - 비공개 원본용 `book-originals` Storage
 - 승인된 공개 자료용 `book-publications` Storage
 - 익명 사용자와 로그인 운영자를 구분하는 RLS

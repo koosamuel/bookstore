@@ -49,7 +49,9 @@ test("사람이 확인한 실제 작품은 로컬 전용 검토 조건에서만 
 test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
-  assert.match(html, /data-tab="agent"/);
+  assert.match(html, /data-tab="pages">읽기·편집/);
+  assert.doesNotMatch(html, /data-tab="agent"/);
+  assert.match(html, /class="reading-editing-grid"/);
   assert.match(html, /id="agentEditorForm"/);
   assert.match(html, /id="agentHumanConfirmed"/);
   assert.ok(html.indexOf("agent-demo.js") < html.indexOf("demo.js"));
@@ -58,7 +60,7 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /data-agent-suggestion/);
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);
   assert.match(html, /<h1>작품 편집<\/h1>/);
-  assert.match(html, /data-tab="pages">읽기/);
+  assert.match(html, /id="setCurrentCoverButton"/);
   assert.doesNotMatch(`${html}\n${js}`, /PRIVATE EDITOR|대표 데모|임시 제목|안전한 편집 원칙|이 데모 보기/);
 });
 
@@ -75,6 +77,23 @@ test("페이지 상태 영역에 기기 내 OCR 초안과 사람 검수 흐름�
   assert.match(js, /koreanTextSignal/);
   assert.match(html, /잘못된 영문 결과를 숨겼습니다/);
   assert.match(js, /sendOcrDraftToAgent/);
+});
+
+test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다", () => {
+  const html = readProjectFile("demo.html");
+  const js = readProjectFile("demo.js");
+  const sql = readProjectFile("supabase/work-editor.sql");
+  assert.match(html, /data-tab="publishing">표지·대본/);
+  assert.match(html, /id="selectCoverButton"/);
+  assert.match(html, /id="workScript"/);
+  assert.match(html, /id="savePublishingButton"/);
+  assert.match(js, /from\("work_editor_drafts"\)\.upsert/);
+  assert.match(js, /cover_page:selectedCoverPage/);
+  assert.match(js, /script,/);
+  assert.match(js, /editorSession\.user\.id/);
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /auth\.uid\(\) = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'/);
+  assert.match(sql, /revoke all on table public\.work_editor_drafts from anon/);
 });
 
 test("개인정보 후보가 있으면 실행을 중단한다", () => {

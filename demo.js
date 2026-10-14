@@ -33,8 +33,15 @@ let continuousObserver = null;
 let currentAgentOutput = null;
 let ocrWorkerPromise = null;
 let ocrRunning = false;
+let editorSession = null;
+let selectedCoverPage = 1;
+let editorSchemaReady = false;
 const KOREAN_OCR_MIN_CONFIDENCE = 40;
 const KOREAN_OCR_MIN_RATIO = .25;
+const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_aQpJ9mF2fngaiZHFG89fzw_4ZoiCBPw";
+const OPERATOR_USER_ID = "f0d2a994-5837-4bbb-9f27-818f079d4c65";
+const db = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) || null;
 const $ = (selector) => document.querySelector(selector);
 const escapeHtml = (value = "") => String(value ?? "").replace(/[&<>'"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
 const pageParams = new URLSearchParams(window.location.search);
@@ -48,9 +55,120 @@ function imagePath(work, index) {
   return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
 }
 
+function editorTableMissing(error) {
+  const message = String(error?.message || error?.details || "");
+  return error?.code === "PGRST205" || error?.code === "42P01" || /work_editor_drafts|schema cache/i.test(message);
+}
+
+function isOperatorSession() {
+  return editorSession?.user?.id === OPERATOR_USER_ID;
+}
+
+function setServerStatus(message, state = "") {
+  const status = $("#serverSaveStatus");
+  status.textContent = message;
+  status.dataset.state = state;
+}
+
+function draftFor(work) {
+  return work?.serverDraft || null;
+}
+
+async function loadEditorServerState() {
+  if (!db || readerOnlyMode) return;
+  const { data:{ session }, error:sessionError } = await db.auth.getSession();
+  if (sessionError) console.warn(sessionError);
+  editorSession = session || null;
+  if (!isOperatorSession()) {
+    editorSchemaReady = false;
+    setServerStatus("운영자 로그인 후 저장할 수 있습니다.", "login");
+    $("#editorLoginLink").hidden = false;
+    $("#savePublishingButton").disabled = true;
+    return;
+  }
+  const { data, error } = await db.from("work_editor_drafts").select("work_key,title,cover_page,cover_image_path,script,updated_at").in("work_key", works.map((work) => work.folder));
+  if (error) {
+    editorSchemaReady = false;
+    setServerStatus(editorTableMissing(error) ? "서버 저장 공간을 준비해 주세요." : "서버 자료를 불러오지 못했습니다.", "error");
+    $("#savePublishingButton").disabled = true;
+    console.warn(error);
+    return;
+  }
+  (data || []).forEach((draft) => {
+    const work = works.find((item) => item.folder === draft.work_key);
+    if (work) work.serverDraft = draft;
+  });
+  editorSchemaReady = true;
+  $("#editorLoginLink").hidden = true;
+  $("#savePublishingButton").disabled = false;
+  setServerStatus("서버 연결됨", "ready");
+}
+
+function renderPublishingEditor() {
+  if (!selectedWork) return;
+  const draft = draftFor(selectedWork);
+  selectedCoverPage = Math.min(Math.max(Number(draft?.cover_page || selectedCoverPage || 1),1),selectedWork.count);
+  $("#coverPreview").src = imagePath(selectedWork, selectedCoverPage - 1);
+  $("#coverPreview").alt = `${selectedWork.title} ${selectedCoverPage}쪽 표지 미리보기`;
+  $("#coverPageLabel").textContent = `${selectedCoverPage}쪽`;
+  $("#workScript").value = draft?.script || "";
+  $("#scriptLength").textContent = String($("#workScript").value.length);
+  if (!isOperatorSession()) {
+    setServerStatus("운영자 로그인 후 저장할 수 있습니다.", "login");
+  } else if (!editorSchemaReady) {
+    setServerStatus("서버 저장 공간을 준비해 주세요.", "error");
+  } else if (draft?.updated_at) {
+    setServerStatus(`${new Date(draft.updated_at).toLocaleString("ko-KR")} 저장됨`, "saved");
+  } else {
+    setServerStatus("서버 연결됨", "ready");
+  }
+}
+
+function markPublishingChanged() {
+  if (isOperatorSession() && editorSchemaReady) setServerStatus("저장하지 않은 변경사항", "changed");
+}
+
+async function savePublishingEditor(event) {
+  event.preventDefault();
+  if (!selectedWork || !db || !isOperatorSession()) {
+    setServerStatus("운영자 로그인 후 저장할 수 있습니다.", "error");
+    return;
+  }
+  if (!editorSchemaReady) {
+    setServerStatus("서버 저장 공간을 준비해 주세요.", "error");
+    return;
+  }
+  const button = $("#savePublishingButton");
+  const script = $("#workScript").value.trim();
+  const payload = {
+    work_key:selectedWork.folder,
+    title:selectedWork.title,
+    cover_page:selectedCoverPage,
+    cover_image_path:imagePath(selectedWork, selectedCoverPage - 1),
+    script,
+    updated_by:editorSession.user.id,
+    updated_at:new Date().toISOString()
+  };
+  button.disabled = true;
+  button.textContent = "저장 중";
+  setServerStatus("서버에 저장 중", "saving");
+  const { data, error } = await db.from("work_editor_drafts").upsert(payload, { onConflict:"work_key" }).select().single();
+  button.textContent = "서버에 저장";
+  button.disabled = false;
+  if (error) {
+    if (editorTableMissing(error)) editorSchemaReady = false;
+    setServerStatus(editorTableMissing(error) ? "서버 저장 공간을 준비해 주세요." : "저장하지 못했습니다. 다시 시도해 주세요.", "error");
+    console.error(error);
+    return;
+  }
+  selectedWork.serverDraft = data;
+  setServerStatus(`${new Date(data.updated_at).toLocaleString("ko-KR")} 저장됨`, "saved");
+  renderCards();
+}
+
 function renderCards() {
   $("#demoGrid").innerHTML = works.map((work,index) => `<article class="demo-card">
-    <div class="demo-card-cover"><img src="${imagePath(work,0)}" alt="${work.title} 첫 페이지" /></div>
+    <div class="demo-card-cover"><img src="${draftFor(work)?.cover_image_path || imagePath(work,0)}" alt="${work.title} 표지" /></div>
     <div class="demo-card-body"><h2>${work.title}</h2>
       <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 회차</span></div>
       <button type="button" data-open-work="${index}">열기</button>
@@ -60,6 +178,7 @@ function renderCards() {
 
 function openWork(index) {
   selectedWork = works[index];
+  selectedCoverPage = Number(draftFor(selectedWork)?.cover_page || 1);
   selectedPage = Number(localStorage.getItem(progressKey(selectedWork)) || 0);
   if (!Number.isInteger(selectedPage) || selectedPage < 0 || selectedPage >= selectedWork.count) selectedPage = 0;
   selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
@@ -84,6 +203,7 @@ function openWork(index) {
   } else {
     renderContinuousReader();
     setReaderMode("single"); setZoom(1); showTab("pages"); showPage(selectedPage);
+    renderPublishingEditor();
   }
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -254,10 +374,11 @@ function sendOcrDraftToAgent() {
   if (!text) return;
   saveOcrPageDraft(text, readOcrPageDraft()?.confidence);
   localStorage.setItem(agentDraftKey(selectedWork, selectedPage), text);
-  showTab("agent");
   $("#agentPageText").value = text;
   $("#agentHumanConfirmed").checked = false;
   $("#agentError").textContent = "원본과 대조한 뒤 확인해 주세요.";
+  $("#agentEditorForm").scrollIntoView({behavior:"smooth",block:"center"});
+  $("#agentPageText").focus();
 }
 
 function loadAgentPageDraft() {
@@ -440,13 +561,28 @@ function setupPanControls() {
 function showTab(name) {
   document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active",button.dataset.tab === name));
   document.querySelectorAll("[data-panel]").forEach((panel) => { const active = panel.dataset.panel === name; panel.classList.toggle("active",active); panel.hidden = !active; });
-  if (name === "agent") loadAgentPageDraft();
+  if (name === "publishing") renderPublishingEditor();
 }
 
-renderCards();
-const requestedWorkValue = pageParams.get("work");
-const requestedWork = requestedWorkValue === null ? null : Number(requestedWorkValue);
-if (Number.isInteger(requestedWork) && requestedWork >= 0 && requestedWork < works.length) openWork(requestedWork);
+function selectCurrentPageAsCover() {
+  if (!selectedWork) return;
+  selectedCoverPage = selectedPage + 1;
+  $("#coverPreview").src = imagePath(selectedWork, selectedPage);
+  $("#coverPreview").alt = `${selectedWork.title} ${selectedCoverPage}쪽 표지 미리보기`;
+  $("#coverPageLabel").textContent = `${selectedCoverPage}쪽`;
+  $("#readerMessage").textContent = `${selectedCoverPage}쪽을 표지로 선택했습니다.`;
+  markPublishingChanged();
+}
+
+async function initializeEditor() {
+  await loadEditorServerState();
+  renderCards();
+  const requestedWorkValue = pageParams.get("work");
+  const requestedWork = requestedWorkValue === null ? null : Number(requestedWorkValue);
+  if (Number.isInteger(requestedWork) && requestedWork >= 0 && requestedWork < works.length) openWork(requestedWork);
+}
+
+initializeEditor();
 document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click",() => showTab(button.dataset.tab)));
 $("#previousPage").addEventListener("click",() => showPage(selectedPage-1));
 $("#nextPage").addEventListener("click",() => showPage(selectedPage+1));
@@ -471,6 +607,13 @@ $("#agentEditorForm").addEventListener("submit",runPageAgent);
 $("#agentPageText").addEventListener("input",() => { if (selectedWork) localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value); });
 $("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
 $("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
+$("#setCurrentCoverButton").addEventListener("click",selectCurrentPageAsCover);
+$("#selectCoverButton").addEventListener("click",selectCurrentPageAsCover);
+$("#workScript").addEventListener("input",() => {
+  $("#scriptLength").textContent = String($("#workScript").value.length);
+  markPublishingChanged();
+});
+$("#publishingEditorForm").addEventListener("submit",savePublishingEditor);
 $("#contrastButton").addEventListener("click",(event) => { const active = document.body.classList.toggle("high-contrast"); event.currentTarget.setAttribute("aria-pressed",String(active)); });
 $("#readerFullscreenButton").addEventListener("click",async () => {
   try { if (!document.fullscreenElement) await $("#workspace").requestFullscreen(); else await document.exitFullscreen(); }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=12" />
+    <link rel="stylesheet" href="./demo.css?v=14" />
   </head>
   <body>
     <header class="demo-header">
@@ -23,13 +23,15 @@
         </div>
 
         <nav class="tabs" aria-label="편집 메뉴">
-          <button class="active" type="button" data-tab="pages">읽기</button>
-          <button type="button" data-tab="agent">AI 편집</button>
+          <button class="active" type="button" data-tab="pages">읽기·편집</button>
           <button type="button" data-tab="episodes">회차</button>
+          <button type="button" data-tab="publishing">표지·대본</button>
           <button type="button" data-tab="review">검토</button>
         </nav>
 
         <section class="panel active" data-panel="pages">
+          <div class="reading-editing-grid">
+            <div class="reading-column">
           <div class="reader-toolbar" aria-label="읽기 설정">
             <div class="segmented" role="group" aria-label="읽기 방식">
               <button class="active" id="singleModeButton" type="button">한 페이지</button>
@@ -51,6 +53,7 @@
                 <span id="readerMessage">OCR 사용 가능</span>
               </div>
               <div class="ocr-actions">
+                <button id="setCurrentCoverButton" type="button">표지로 설정</button>
                 <button id="ocrRunButton" type="button">OCR 만들기</button>
                 <button id="ocrUseButton" type="button" hidden>AI 편집으로</button>
               </div>
@@ -87,9 +90,7 @@
             </nav>
           </section>
           <div class="thumbnail-strip" id="thumbnailStrip"></div>
-        </section>
-
-        <section class="panel" data-panel="agent" hidden>
+            </div>
           <div class="agent-editor">
             <header class="agent-editor-head"><h3>현재 페이지 AI 편집</h3></header>
             <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
@@ -105,10 +106,34 @@
               <div class="agent-suggestion-list" id="agentSuggestionList"></div>
             </section>
           </div>
+          </div>
         </section>
 
         <section class="panel" data-panel="episodes" hidden>
           <div class="episode-list" id="episodeList"></div>
+        </section>
+
+        <section class="panel" data-panel="publishing" hidden>
+          <form class="publishing-editor" id="publishingEditorForm">
+            <section class="cover-editor" aria-labelledby="coverEditorTitle">
+              <div>
+                <h3 id="coverEditorTitle">표지</h3>
+                <p id="coverPageLabel">1쪽</p>
+              </div>
+              <img id="coverPreview" alt="선택한 표지 미리보기" />
+              <button id="selectCoverButton" type="button">현재 페이지를 표지로</button>
+            </section>
+            <label class="script-editor" for="workScript">
+              <strong>대본</strong>
+              <textarea id="workScript" rows="16" maxlength="50000" placeholder="작품 전체 대본을 입력하세요."></textarea>
+              <span><output id="scriptLength">0</output> / 50,000자</span>
+            </label>
+            <div class="server-save-row">
+              <p id="serverSaveStatus" role="status">서버 연결 확인 중</p>
+              <a id="editorLoginLink" href="./index.html#login" hidden>운영자 로그인</a>
+              <button id="savePublishingButton" type="submit">서버에 저장</button>
+            </div>
+          </form>
         </section>
 
         <section class="panel" data-panel="review" hidden>
@@ -123,8 +148,9 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=12"></script>
+    <script src="./demo.js?v=14"></script>
   </body>
 </html>
