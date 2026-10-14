@@ -137,6 +137,7 @@ test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다",
 test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 제공한다", () => {
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
+  const css = readProjectFile("demo.css");
   assert.match(html, /data-tab="materials">발표자료/);
   assert.match(js, /pageParams\.get\("tab"\)/);
   assert.match(js, /\["pages","materials","review"\]\.includes\(requestedTab\)/);
@@ -149,6 +150,8 @@ test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 
   assert.match(html, /id="webPresentation"/);
   assert.match(js, /function renderPresentationSlide/);
   assert.match(js, /presentationFullscreen/);
+  assert.match(css, /\.web-slide-cover\.active\s*\{[^}]*display:grid/);
+  assert.doesNotMatch(css, /\.web-slide-cover\s*\{[^}]*display:grid!important/);
 });
 
 test("Claude 연결은 운영자 승인형 서버 함수와 개인정보 차단을 사용한다", () => {
