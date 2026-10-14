@@ -102,13 +102,17 @@ test("작품 상세의 표지를 누르면 전체화면 그림책 리더가 열�
 test("마이 탭은 운영자 이메일과 비밀번호를 Supabase에서 검증한 뒤에만 열린다", () => {
   const html = read("index.html");
   const app = read("app.js");
-  assert.match(html, /id="loginDialog"/);
+  assert.match(html, /id="loginPanel"/);
+  assert.match(html, /id="loginTitle">운영자 로그인/);
   assert.match(html, /id="loginEmail"[^>]*type="email"/);
   assert.match(html, /id="loginPassword"[^>]*type="password"[^>]*pattern="\[0-9\]\{6\}"/);
+  assert.match(html, /id="loginCancelButton"/);
   assert.match(html, /class="text-button my-manage-button" id="logoutButton"/);
   assert.match(html, /<div id="myDashboard">/);
   assert.match(app, /requestPrimaryTab/);
   assert.match(app, /nextTab === "my" && !isOperatorSession\(\)/);
+  assert.match(app, /setPrimaryTab\("login"\)/);
+  assert.match(app, /activePrimaryTab === "login" \? "#login"/);
   assert.match(app, /const OPERATOR_USER_ID = "[0-9a-f-]+"/);
   assert.match(app, /signInWithPassword\(\{ email, password \}\)/);
   assert.match(app, /data\.session\?\.user\?\.id !== OPERATOR_USER_ID/);

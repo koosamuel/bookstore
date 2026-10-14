@@ -84,27 +84,27 @@ function updateAuthUi() {
 }
 
 function openMyLogin() {
-  const dialog = $("#loginDialog");
   $("#loginForm").reset();
   $("#loginError").textContent = "";
-  if (!dialog.open) dialog.showModal();
+  setPrimaryTab("login");
   window.setTimeout(() => $("#loginEmail").focus(), 0);
 }
 
 function setPrimaryTab(tab) {
-  activePrimaryTab = tab === "my" ? "my" : "home";
+  activePrimaryTab = tab === "my" || tab === "login" ? tab : "home";
   document.querySelectorAll("[data-primary-tab]").forEach((button) => {
-    const selected = button.dataset.primaryTab === activePrimaryTab;
+    const selected = button.dataset.primaryTab === activePrimaryTab || (activePrimaryTab === "login" && button.dataset.primaryTab === "my");
     button.classList.toggle("active", selected);
     button.setAttribute("aria-selected", String(selected));
   });
   $("#homePanel").hidden = activePrimaryTab !== "home";
+  $("#loginPanel").hidden = activePrimaryTab !== "login";
   $("#myPanel").hidden = activePrimaryTab !== "my";
   if (activePrimaryTab === "my") {
     renderMyDashboard();
     if (session) refreshAuthorDashboard();
   }
-  history.replaceState(null, "", activePrimaryTab === "my" ? "#my" : "#home");
+  history.replaceState(null, "", activePrimaryTab === "my" ? "#my" : activePrimaryTab === "login" ? "#login" : "#home");
   window.scrollTo({ top:0, behavior:"smooth" });
 }
 
@@ -950,7 +950,6 @@ async function login(event) {
     }
     session = data.session;
     $("#loginForm").reset();
-    $("#loginDialog").close();
     setPrimaryTab(pendingPrimaryTab || "my");
     pendingPrimaryTab = null;
     await refreshAuthorDashboard();
@@ -960,7 +959,7 @@ async function login(event) {
     console.error(error);
   } finally {
     button.disabled = false;
-    button.textContent = "마이 열기";
+    button.textContent = "운영자 로그인";
   }
 }
 
@@ -973,6 +972,7 @@ $("#searchInput").addEventListener("input", (event) => { query = event.target.va
 document.querySelectorAll("[data-primary-tab]").forEach((button) => button.addEventListener("click", () => requestPrimaryTab(button.dataset.primaryTab)));
 $("#myAuthorSelect").addEventListener("change", async (event) => { activeAuthorAlias = event.target.value; authorDashboard = null; authorDashboardMode = "loading"; renderMyDashboard(); await refreshAuthorDashboard(); });
 $("#loginForm").addEventListener("submit", login);
+$("#loginCancelButton").addEventListener("click", () => { pendingPrimaryTab = null; setPrimaryTab("home"); });
 $("#addBookForm").addEventListener("submit", addBook);
 $("#editBookForm").addEventListener("submit", editBook);
 $("#publishingForm").addEventListener("submit", savePublishingMetadata);
@@ -984,15 +984,7 @@ document.querySelectorAll(".workflow-tab").forEach((button) => button.addEventLi
 $("#logoutButton").addEventListener("click", logout);
 $("#resetAllButton").addEventListener("click", async () => { if (!confirm("모든 책을 ‘대여 가능’으로 바꿀까요?")) return; const { error } = await db.from("books").update({ status:"available", borrowed_at:null, updated_at:new Date().toISOString() }).eq("status", "borrowed"); showToast(error ? "초기화에 실패했습니다." : "모든 대여 상태를 초기화했어요."); });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
-["bookDialog","loginDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
-$("#loginDialog").addEventListener("close", () => {
-  $("#loginForm").reset();
-  $("#loginError").textContent = "";
-  if (!isOperatorSession() && pendingPrimaryTab === "my") {
-    pendingPrimaryTab = null;
-    setPrimaryTab("home");
-  }
-});
+["bookDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
 
 $("#fullscreenButton").addEventListener("click", async () => {
   try {
@@ -1023,7 +1015,10 @@ function startHeroBanner() {
 db.auth.onAuthStateChange(async (_event, nextSession) => {
   session = nextSession;
   updateAuthUi();
-  if (!isOperatorSession() && activePrimaryTab === "my") setPrimaryTab("home");
+  if (!isOperatorSession() && activePrimaryTab === "my") {
+    pendingPrimaryTab = "my";
+    openMyLogin();
+  }
   await loadEngagement();
   if (isOperatorSession()) await refreshAuthorDashboard();
   renderBooks();
@@ -1040,8 +1035,9 @@ async function initializeApp() {
   session = data.session;
   updateAuthUi();
   startHeroBanner();
-  requestPrimaryTab(location.hash === "#my" ? "my" : "home");
+  requestPrimaryTab(location.hash === "#my" || location.hash === "#login" ? "my" : "home");
   await loadBooks();
 }
 
+window.addEventListener("hashchange", () => requestPrimaryTab(location.hash === "#my" || location.hash === "#login" ? "my" : "home"));
 initializeApp();

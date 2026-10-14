@@ -16,7 +16,7 @@
     <meta name="twitter:image" content="https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site/assets/web/og.png" />
     <link rel="canonical" href="https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site/" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=28" />
+    <link rel="stylesheet" href="./styles.css?v=29" />
     <title>빙고서점</title>
   </head>
   <body>
@@ -100,6 +100,40 @@
       </section>
       </section>
 
+      <section class="operator-login-panel" id="loginPanel" aria-labelledby="loginTitle" hidden>
+        <div class="operator-login-shell">
+          <div class="operator-login-intro">
+            <span class="operator-login-icon" aria-hidden="true">🔐</span>
+            <p class="eyebrow">OPERATOR ACCESS</p>
+            <h2 id="loginTitle">운영자 로그인</h2>
+            <p>어린이 작가의 비공개 작품과 검토 자료를 안전하게 관리하는 운영자 전용 공간입니다.</p>
+            <ul>
+              <li>승인된 운영자 계정만 접속할 수 있습니다.</li>
+              <li>로그인 정보는 이 화면이나 저장소에 보관하지 않습니다.</li>
+              <li>작업을 마치면 반드시 로그아웃해 주세요.</li>
+            </ul>
+          </div>
+          <div class="operator-login-card">
+            <form id="loginForm">
+              <div>
+                <p class="eyebrow">MY BOOKSHELF</p>
+                <h3>마이 작업실 열기</h3>
+                <p class="dialog-description">등록된 운영자 이메일과 숫자 6자리 비밀번호를 입력해 주세요.</p>
+              </div>
+              <label class="field">운영자 이메일
+                <input id="loginEmail" type="email" inputmode="email" autocomplete="username" required />
+              </label>
+              <label class="field">운영자 비밀번호
+                <input id="loginPassword" type="password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="current-password" required />
+              </label>
+              <p class="form-error" id="loginError" role="alert"></p>
+              <button class="primary-button" id="loginButton" type="submit">운영자 로그인</button>
+              <button class="login-home-button" id="loginCancelButton" type="button">홈으로 돌아가기</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
       <section class="my-panel" id="myPanel" role="tabpanel" aria-labelledby="myTab" hidden>
         <div class="my-heading">
           <div><p class="eyebrow">MY BOOKSHELF · 안전한 작품 관리</p><h2>마이</h2><p>작품은 보호자·운영자 검토를 통과하기 전까지 공개되지 않습니다.</p></div>
@@ -137,23 +171,6 @@
     </main>
 
     <dialog id="bookDialog" class="book-dialog"><div id="bookDialogContent"></div></dialog>
-    <dialog id="loginDialog" class="login-dialog" aria-labelledby="loginTitle">
-      <form id="loginForm">
-        <div class="dialog-head">
-          <div><p class="eyebrow">MY BOOKSHELF</p><h2 id="loginTitle">마이 로그인</h2></div>
-          <button class="icon-button" type="button" data-close="loginDialog" aria-label="로그인 취소">×</button>
-        </div>
-        <p class="dialog-description">어린이 작가의 비공개 작업 공간입니다. 관리자 이메일과 비밀번호를 입력해 주세요.</p>
-        <label class="field">관리자 이메일
-          <input id="loginEmail" type="email" inputmode="email" autocomplete="username" required />
-        </label>
-        <label class="field">관리자 비밀번호
-          <input id="loginPassword" type="password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="current-password" required />
-        </label>
-        <p class="form-error" id="loginError" role="alert"></p>
-        <button class="primary-button" id="loginButton" type="submit">마이 열기</button>
-      </form>
-    </dialog>
     <dialog id="manageDialog" class="manage-dialog">
       <div class="dialog-head"><div><p class="eyebrow">LIBRARY DESK</p><h2>관리자 모드</h2></div><button class="icon-button" data-close="manageDialog" aria-label="닫기">×</button></div>
       <section class="admin-section" aria-labelledby="addBookTitle">
@@ -279,6 +296,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./agent-demo.js?v=2" defer></script>
     <script src="./server-api.js?v=1" defer></script>
-    <script src="./app.js?v=28" defer></script>
+    <script src="./app.js?v=29" defer></script>
   </body>
 </html>
