@@ -8,8 +8,8 @@ const works = [
     timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
     notice: "페이지 순서 확인 완료. 작품명·에피소드 경계·공개용 작가명과 보호자 동의는 확정 전입니다.",
     episodes: [
-      [1,"도입과 작품 안내",1,2], [2,"스포츠 이야기 1",3,5], [3,"스포츠 이야기 2",6,8],
-      [4,"스포츠 이야기 3",9,11], [5,"스포츠 이야기 4",12,15], [6,"마지막 이야기와 끝맺음",16,20]
+      [1,"먼지귀들의 연습",1,3], [2,"이게 복싱?",4,6], [3,"이게 복싱? (2)",7,8],
+      [4,"던전",9,11], [5,"이상한 축구",12,16], [6,"난겐 죽이기",17,17], [7,"이게 배드민턴?",18,20]
     ]
   },
   {
@@ -38,6 +38,9 @@ let selectedCoverPage = 1;
 let editorSchemaReady = false;
 let episodeFullscreenMode = false;
 let currentPageCrop = { x:0, y:0, width:100, height:100 };
+let autoTurnEnabled = false;
+let autoTurnTimer = null;
+let presentationSlideIndex = 0;
 const KOREAN_OCR_MIN_CONFIDENCE = 40;
 const KOREAN_OCR_MIN_RATIO = .25;
 const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
@@ -50,14 +53,17 @@ const pageParams = new URLSearchParams(window.location.search);
 const readerOnlyMode = pageParams.get("mode") === "reader";
 
 function fileName(work, index) {
+  if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.name || `가져온 이미지 ${index + 1}`;
   return `${String(index + 1).padStart(3,"0")}_20260930_${work.timestamps[index]}.jpg`;
 }
 
 function imagePath(work, index) {
+  if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.url || "";
   return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
 }
 
 function episodeTitleKey(work, episodeIndex) { return `bingo-episode-title-${work.folder}-${episodeIndex + 1}`; }
+function episodeStructureKey(work) { return `bingo-episode-structure-${work.folder}`; }
 
 function pageCropKey(work, pageIndex) { return `bingo-page-crop-${work.folder}-${pageIndex + 1}`; }
 
@@ -86,6 +92,180 @@ function loadSavedEpisodeTitles(work) {
     const savedTitle = localStorage.getItem(episodeTitleKey(work,index))?.trim();
     if (savedTitle) episode[1] = savedTitle;
   });
+}
+
+function loadSavedEpisodeStructure(work) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(episodeStructureKey(work)) || "null");
+    if (!Array.isArray(saved) || saved.length !== work.episodes.length) return;
+    const valid = saved.every((episode,index) => Array.isArray(episode) && episode.length === 4 && Number(episode[0]) === index + 1 && Number.isInteger(Number(episode[2])) && Number.isInteger(Number(episode[3])) && Number(episode[2]) >= 1 && Number(episode[3]) >= Number(episode[2]) && Number(episode[3]) <= work.count && (index === 0 ? Number(episode[2]) === 1 : Number(episode[2]) === Number(saved[index-1][3]) + 1));
+    if (valid) work.episodes = saved.map(([number,title,start,end]) => [Number(number),String(title),Number(start),Number(end)]);
+  } catch { /* 잘못된 기기 저장값은 기본 회차 구성을 사용한다. */ }
+}
+
+function saveEpisodeStructure(work) {
+  localStorage.setItem(episodeStructureKey(work),JSON.stringify(work.episodes));
+}
+
+function openPageImageDatabase() {
+  return new Promise((resolve,reject) => {
+    if (!window.indexedDB) { reject(new Error("이 브라우저는 이미지 보관을 지원하지 않습니다.")); return; }
+    const request = indexedDB.open("bingo-bookstore-editor",2);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains("imported-pages")) database.createObjectStore("imported-pages",{keyPath:"id"});
+      if (!database.objectStoreNames.contains("presentation-files")) database.createObjectStore("presentation-files",{keyPath:"id"});
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("이미지 저장 공간을 열지 못했습니다."));
+  });
+}
+
+async function readPresentationRecords() {
+  const database = await openPageImageDatabase();
+  return new Promise((resolve,reject) => {
+    const transaction = database.transaction("presentation-files","readonly");
+    const request = transaction.objectStore("presentation-files").getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => database.close();
+  });
+}
+
+async function storePresentationRecord(record) {
+  const database = await openPageImageDatabase();
+  return new Promise((resolve,reject) => {
+    const transaction = database.transaction("presentation-files","readwrite");
+    transaction.objectStore("presentation-files").put(record);
+    transaction.oncomplete = () => { database.close(); resolve(); };
+    transaction.onerror = () => { database.close(); reject(transaction.error); };
+  });
+}
+
+async function readImportedPageRecords() {
+  const database = await openPageImageDatabase();
+  return new Promise((resolve,reject) => {
+    const transaction = database.transaction("imported-pages","readonly");
+    const request = transaction.objectStore("imported-pages").getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => database.close();
+  });
+}
+
+async function storeImportedPageRecord(record) {
+  const database = await openPageImageDatabase();
+  return new Promise((resolve,reject) => {
+    const transaction = database.transaction("imported-pages","readwrite");
+    transaction.objectStore("imported-pages").put(record);
+    transaction.oncomplete = () => { database.close(); resolve(); };
+    transaction.onerror = () => { database.close(); reject(transaction.error); };
+  });
+}
+
+function attachImportedRecord(work,record) {
+  work.importedPages ||= [];
+  work.importedPages.push({...record,url:URL.createObjectURL(record.blob)});
+  work.importedPages.sort((left,right) => left.order-right.order);
+  work.count = work.timestamps.length + work.importedPages.length;
+}
+
+async function loadImportedPages() {
+  works.forEach((work) => { work.importedPages = []; work.presentationFiles = []; work.count = work.timestamps.length; });
+  try {
+    const [records,presentationRecords] = await Promise.all([readImportedPageRecords(),readPresentationRecords()]);
+    records.sort((left,right) => left.order-right.order).forEach((record) => {
+      const work = works.find((item) => item.folder === record.workKey);
+      if (work && record.blob instanceof Blob) attachImportedRecord(work,record);
+    });
+    works.forEach((work) => {
+      if (work.importedPages.length && work.episodes.length) work.episodes.at(-1)[3] = work.count;
+    });
+    presentationRecords.sort((left,right) => left.order-right.order).forEach((record) => {
+      const work = works.find((item) => item.folder === record.workKey);
+      if (work && record.blob instanceof Blob) work.presentationFiles.push({...record,url:URL.createObjectURL(record.blob)});
+    });
+  } catch (error) { console.warn(error); }
+}
+
+function recordId(prefix) {
+  return `${prefix}-${window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+}
+
+async function importPageImages(fileList) {
+  if (!selectedWork) return;
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
+  if (!files.length) { $("#imageImportStatus").textContent = "이미지 파일을 선택해 주세요."; return; }
+  const oversized = files.find((file) => file.size > 25 * 1024 * 1024);
+  if (oversized) { $("#imageImportStatus").textContent = `${oversized.name} 파일은 25MB보다 큽니다.`; return; }
+  $("#imageImportStatus").textContent = `${files.length}장 가져오는 중…`;
+  const firstNewPage = selectedWork.count;
+  try {
+    for (const [index,file] of files.entries()) {
+      const record = {id:recordId("page"),workKey:selectedWork.folder,name:file.name,type:file.type,size:file.size,order:Date.now()+index,blob:file};
+      await storeImportedPageRecord(record);
+      attachImportedRecord(selectedWork,record);
+    }
+    if (selectedWork.episodes.length) selectedWork.episodes.at(-1)[3] = selectedWork.count;
+    saveEpisodeStructure(selectedWork);
+    renderCards();
+    renderEpisodeList();
+    renderThumbnails();
+    renderContinuousReader();
+    showPage(firstNewPage);
+    showTab("pages");
+    $("#imageImportStatus").textContent = `${files.length}장을 ${firstNewPage+1}~${selectedWork.count}쪽에 추가했습니다.`;
+  } catch (error) {
+    console.warn(error);
+    $("#imageImportStatus").textContent = "이미지를 기기에 저장하지 못했습니다. 브라우저 저장 공간을 확인해 주세요.";
+  }
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1,Math.round(bytes/1024))}KB`;
+  return `${(bytes/1024/1024).toFixed(1)}MB`;
+}
+
+function renderPresentationFiles() {
+  if (!selectedWork) return;
+  const files = selectedWork.presentationFiles || [];
+  $("#presentationFileList").innerHTML = files.length ? files.map((file) => `<article class="presentation-file"><div><strong>${escapeHtml(file.name)}</strong><small>${escapeHtml(file.type || "파일")} · ${formatFileSize(file.size || file.blob.size)}</small></div><a href="${file.url}" download="${escapeHtml(file.name)}" target="_blank" rel="noopener">열기·받기</a></article>`).join("") : `<div class="presentation-empty">아직 넣은 발표자료가 없습니다.</div>`;
+}
+
+function renderPresentationSlide(index = presentationSlideIndex) {
+  const slides = Array.from(document.querySelectorAll("[data-web-slide]"));
+  if (!slides.length) return;
+  presentationSlideIndex = Math.min(Math.max(index,0),slides.length-1);
+  slides.forEach((slide,slideIndex) => {
+    const active = slideIndex === presentationSlideIndex;
+    slide.hidden = !active;
+    slide.classList.toggle("active",active);
+  });
+  $("#presentationSlideNumber").textContent = `${presentationSlideIndex+1} / ${slides.length}`;
+  $("#presentationPrevious").disabled = presentationSlideIndex === 0;
+  $("#presentationNext").disabled = presentationSlideIndex === slides.length-1;
+}
+
+async function importPresentationFiles(fileList) {
+  if (!selectedWork) return;
+  const allowed = /(?:pdf|powerpoint|presentation|image)/i;
+  const files = Array.from(fileList || []).filter((file) => allowed.test(file.type) || /\.(pdf|ppt|pptx)$/i.test(file.name));
+  if (!files.length) { $("#presentationStatus").textContent = "PDF·PPT·PPTX·이미지 파일을 선택해 주세요."; return; }
+  const oversized = files.find((file) => file.size > 50 * 1024 * 1024);
+  if (oversized) { $("#presentationStatus").textContent = `${oversized.name} 파일은 50MB보다 큽니다.`; return; }
+  $("#presentationStatus").textContent = `${files.length}개 자료를 저장하는 중…`;
+  try {
+    for (const [index,file] of files.entries()) {
+      const record = {id:recordId("material"),workKey:selectedWork.folder,name:file.name,type:file.type,size:file.size,order:Date.now()+index,blob:file};
+      await storePresentationRecord(record);
+      selectedWork.presentationFiles.push({...record,url:URL.createObjectURL(file)});
+    }
+    renderPresentationFiles();
+    $("#presentationStatus").textContent = `${files.length}개 발표자료를 현재 기기에 저장했습니다.`;
+  } catch (error) {
+    console.warn(error);
+    $("#presentationStatus").textContent = "발표자료를 저장하지 못했습니다. 브라우저 저장 공간을 확인해 주세요.";
+  }
 }
 
 function editorTableMissing(error) {
@@ -177,7 +357,7 @@ async function savePublishingEditor(event) {
     work_key:selectedWork.folder,
     title:selectedWork.title,
     cover_page:selectedCoverPage,
-    cover_image_path:imagePath(selectedWork, selectedCoverPage - 1),
+    cover_image_path:selectedCoverPage <= selectedWork.timestamps.length ? imagePath(selectedWork, selectedCoverPage - 1) : (draftFor(selectedWork)?.cover_image_path || ""),
     script,
     updated_by:editorSession.user.id,
     updated_at:new Date().toISOString()
@@ -222,17 +402,22 @@ function enterEpisodeFullscreen() {
 
 function renderEpisodeList() {
   if (!selectedWork) return;
-  $("#episodeCount").textContent = `총 ${selectedWork.episodes.length}화`;
-  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}" aria-label="${number}화 ${escapeHtml(title)} 열기">
-    <img src="${imagePath(selectedWork,start-1)}" alt="" loading="lazy" />
-    <span class="episode-copy"><strong>${number}화 · ${escapeHtml(title)}</strong><small>${start}~${end}쪽</small></span>
-    <span class="episode-open">열기</span>
-  </button>`).join("");
-  document.querySelectorAll("[data-episode-start]").forEach((button) => button.addEventListener("click", () => {
-    selectedEpisode = selectedWork.episodes.findIndex((episode) => episode[2] === Number(button.dataset.episodeStart));
-    selectedPage = Number(button.dataset.episodeStart) - 1;
-    enterEpisodeFullscreen();
-  }));
+  const select = $("#agentEpisodeSelect");
+  select.innerHTML = selectedWork.episodes.map(([number,title,start,end],index) => `<option value="${index}">${number}화 · ${escapeHtml(title)} (${start}~${end}쪽)</option>`).join("");
+  select.value = String(selectedEpisode);
+  select.onchange = () => {
+    selectedEpisode = Number(select.value);
+    selectedPage = selectedWork.episodes[selectedEpisode][2]-1;
+    setReaderMode("single");
+    showPage(selectedPage);
+  };
+}
+
+function renderThumbnails() {
+  if (!selectedWork) return;
+  $("#imageNavigatorCount").textContent = `${selectedWork.count}장`;
+  $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
+  document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
 }
 
 function leaveEpisodeFullscreen({ exitBrowserFullscreen = true } = {}) {
@@ -241,13 +426,29 @@ function leaveEpisodeFullscreen({ exitBrowserFullscreen = true } = {}) {
   document.body.classList.remove("reader-only");
   document.title = "빙고서점 · 작품 편집";
   $("#closeWorkspace").textContent = "다른 작품";
-  showTab("episodes");
+  showTab("pages");
   if (exitBrowserFullscreen && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
 }
 
+function stopAutoTurn() {
+  autoTurnEnabled = false;
+  window.clearTimeout(autoTurnTimer);
+  autoTurnTimer = null;
+  const button = $("#autoTurnButton");
+  if (button) { button.setAttribute("aria-pressed","false"); button.textContent = "자동 넘김"; }
+}
+
+function scheduleAutoTurn() {
+  window.clearTimeout(autoTurnTimer);
+  if (!autoTurnEnabled || readerMode !== "single" || !selectedWork || selectedPage >= selectedWork.count - 1) return;
+  autoTurnTimer = window.setTimeout(() => showPage(selectedPage + 1),5000);
+}
+
 function openWork(index) {
   selectedWork = works[index];
+  loadSavedEpisodeStructure(selectedWork);
+  if (selectedWork.importedPages?.length && selectedWork.episodes.length) selectedWork.episodes.at(-1)[3] = selectedWork.count;
   loadSavedEpisodeTitles(selectedWork);
   selectedCoverPage = Number(draftFor(selectedWork)?.cover_page || 1);
   selectedPage = Number(localStorage.getItem(progressKey(selectedWork)) || 0);
@@ -256,18 +457,17 @@ function openWork(index) {
   $("#demoGrid").hidden = true; $("#workspace").hidden = false;
   $("#workTitle").textContent = selectedWork.title;
   renderEpisodeList();
-  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${selectedWork.notice}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p>`;
-  $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
-  document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
+  renderReviewCard();
+  renderThumbnails();
   if (readerOnlyMode) {
     document.body.classList.add("reader-only");
     document.title = `${selectedWork.title} · 카툰 전체화면`;
     $("#closeWorkspace").textContent = "서점으로";
     showTab("pages");
-    setReaderMode("continuous");
+    setReaderMode("single");
   } else {
     renderContinuousReader();
-    setReaderMode("single"); setZoom(1); showPage(selectedPage); showTab("episodes");
+    setReaderMode("single"); setZoom(1); showPage(selectedPage); showTab("pages");
     renderPublishingEditor();
   }
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
@@ -275,7 +475,12 @@ function openWork(index) {
 
 function showPage(index) {
   if (!selectedWork) return;
+  const previousPage = selectedPage;
   selectedPage = Math.min(Math.max(index,0),selectedWork.count-1);
+  const stage = $("#pageStage");
+  stage.classList.remove("page-turn-next","page-turn-previous");
+  void stage.offsetWidth;
+  stage.classList.add(selectedPage < previousPage ? "page-turn-previous" : "page-turn-next");
   $("#readerMessage").textContent = "OCR 사용 가능";
   $("#pageImage").src = imagePath(selectedWork,selectedPage);
   $("#pageImage").alt = `${selectedWork.title} ${selectedPage+1}쪽`;
@@ -292,6 +497,8 @@ function showPage(index) {
   applyZoom();
   loadOcrPageDraft();
   loadAgentPageDraft();
+  if (selectedPage === selectedWork.count-1 && autoTurnEnabled) stopAutoTurn();
+  scheduleAutoTurn();
 }
 
 function progressKey(work) { return `bingo-demo-progress-${work.folder}`; }
@@ -451,10 +658,15 @@ function sendOcrDraftToAgent() {
 function loadAgentPageDraft() {
   if (!selectedWork || readerOnlyMode) return;
   selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
-  const [episodeNumber,episodeTitle] = selectedWork.episodes[selectedEpisode];
+  const [episodeNumber,episodeTitle,episodeStart,episodeEnd] = selectedWork.episodes[selectedEpisode];
   $("#agentPageContext").textContent = `${selectedWork.title} · ${selectedPage + 1}/${selectedWork.count}쪽`;
   $("#agentEpisodeContext").textContent = `${episodeNumber}화`;
   $("#agentEpisodeTitle").value = episodeTitle;
+  $("#agentEpisodeSelect").value = String(selectedEpisode);
+  $("#agentEpisodeStart").value = episodeStart;
+  $("#agentEpisodeStart").max = episodeEnd;
+  $("#agentEpisodeEnd").value = episodeEnd;
+  $("#agentEpisodeEnd").max = selectedWork.count;
   const currentPageIsCover = selectedCoverPage === selectedPage + 1;
   $("#coverTitleEditor").hidden = !currentPageIsCover;
   $("#selectedCoverLabel").textContent = currentPageIsCover ? `${selectedCoverPage}쪽` : "";
@@ -462,6 +674,7 @@ function loadAgentPageDraft() {
   $("#setCurrentCoverButton").textContent = currentPageIsCover ? "표지 선택됨" : "표지로 설정";
   $("#agentPageText").value = localStorage.getItem(agentDraftKey(selectedWork, selectedPage)) || "";
   $("#agentHumanConfirmed").checked = false;
+  $("#agentExternalConsent").checked = false;
   $("#agentError").textContent = "";
   $("#agentResultPanel").hidden = true;
   currentAgentOutput = null;
@@ -501,6 +714,60 @@ function runPageAgent(event) {
   }
 }
 
+async function runClaudePageAgent() {
+  const button = $("#claudeAgentButton");
+  $("#agentError").textContent = "";
+  if (!selectedWork) return;
+  if (!isOperatorSession()) {
+    $("#agentError").textContent = "Claude 제안은 운영자 로그인 후 사용할 수 있습니다.";
+    return;
+  }
+  if (!$("#agentHumanConfirmed").checked) {
+    $("#agentError").textContent = "원본 이미지와 문장을 사람이 확인했는지 체크해 주세요.";
+    return;
+  }
+  if (!$("#agentExternalConsent").checked) {
+    $("#agentError").textContent = "Claude 전송 동의를 확인해 주세요.";
+    return;
+  }
+  const inputText = $("#agentPageText").value.trim();
+  if (!inputText) {
+    $("#agentError").textContent = "검토할 문장을 입력해 주세요.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "연결 중…";
+  $("#agentResultPanel").hidden = true;
+  try {
+    const { data, error } = await db.functions.invoke("generate-book-content", {
+      body: {
+        type:"editing",
+        sourceScope:"actual-local-review",
+        humanConfirmed:true,
+        externalConsent:true,
+        bookId:selectedWork.folder,
+        episodeId:`${selectedWork.episodes[selectedEpisode][0]}화 ${selectedWork.episodes[selectedEpisode][1]}`,
+        sourceVersion:fileName(selectedWork, selectedPage),
+        inputText,
+      },
+    });
+    if (error) throw error;
+    if (!data?.result || !Array.isArray(data.result.suggestions)) throw new Error("invalid Claude response");
+    localStorage.setItem(agentDraftKey(selectedWork, selectedPage), inputText);
+    renderAgentSuggestions(data);
+  } catch (error) {
+    const message = String(error?.message || error || "").toLowerCase();
+    if (message.includes("sensitive")) $("#agentError").textContent = "개인정보 후보가 있어 Claude로 보내지 않았습니다.";
+    else if (message.includes("401") || message.includes("authentication")) $("#agentError").textContent = "운영자 로그인을 다시 확인해 주세요.";
+    else if (message.includes("disabled") || message.includes("configured") || message.includes("503")) $("#agentError").textContent = "Claude 서버 연결을 준비해 주세요.";
+    else $("#agentError").textContent = "Claude 연결에 실패했습니다. 서버 설정을 확인해 주세요.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "Claude 제안";
+  }
+}
+
 function applyAgentSuggestion(id) {
   const suggestion = currentAgentOutput?.result.suggestions.find((item) => item.id === id);
   if (!suggestion || !selectedWork) return;
@@ -511,7 +778,7 @@ function applyAgentSuggestion(id) {
 
 function temporaryEpisodeLabel(work,pageNumber) {
   const episode = work.episodes.find(([, ,start,end]) => pageNumber >= start && pageNumber <= end);
-  return episode ? `임시 ${episode[0]}화` : "에피소드 미지정";
+  return episode ? `${episode[0]}화` : "회차 미지정";
 }
 
 function episodeIndexForPage(work, pageNumber) {
@@ -558,11 +825,11 @@ function renderContinuousReader() {
   const savedValue = readerOnlyMode ? localStorage.getItem(progressKey(selectedWork)) : localStorage.getItem(episodeProgressKey(selectedWork,number));
   const savedPage = readerOnlyMode ? Number(savedValue || 0) : Number(savedValue || start) - 1;
   selectedPage = Math.min(Math.max(savedPage,start-1),end-1);
-  $("#episodeReaderTitle").textContent = readerOnlyMode ? title : `임시 ${number}화 · ${title}`;
+  $("#episodeReaderTitle").textContent = readerOnlyMode ? title : `${number}화 · ${title}`;
   const initialPosition = selectedPage - start + 2;
   const initialTotal = end - start + 1;
   const initialProgress = Math.round((initialPosition / initialTotal) * 100);
-  $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${initialPosition}/${initialTotal}쪽` : `임시 ${number}화 · 컷 ${initialPosition}/${initialTotal} · 원본 ${selectedPage+1}쪽`;
+  $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${initialPosition}/${initialTotal}쪽` : `${number}화 · 컷 ${initialPosition}/${initialTotal} · 원본 ${selectedPage+1}쪽`;
   $("#episodeProgress").textContent = `${initialProgress}%`;
   $("#episodeProgressBar").style.width = `${initialProgress}%`;
   $("#previousEpisode").disabled = selectedEpisode === 0;
@@ -570,7 +837,7 @@ function renderContinuousReader() {
   $("#continuousReader").innerHTML = Array.from({length:end-start+1},(_,offset) => {
     const page = start + offset - 1;
     const crop = readPageCrop(selectedWork,page);
-    const pageLabel = readerOnlyMode ? `${offset+1}/${end-start+1}쪽` : `임시 컷 ${offset+1}/${end-start+1} · 원본 ${page+1}쪽`;
+    const pageLabel = readerOnlyMode ? `${offset+1}/${end-start+1}쪽` : `컷 ${offset+1}/${end-start+1} · 원본 ${page+1}쪽`;
     return `<figure class="continuous-page" id="continuous-page-${page+1}"><div class="continuous-crop" data-crop-x="${crop.x}" data-crop-y="${crop.y}" data-crop-width="${crop.width}" data-crop-height="${crop.height}"><img src="${imagePath(selectedWork,page)}" alt="${title} ${pageLabel}" loading="lazy"></div><figcaption>${pageLabel}</figcaption></figure>`;
   }).join("");
   $("#continuousReader").querySelectorAll("img").forEach((image) => { addImageStatusHandlers(image); applyContinuousCrop(image); });
@@ -583,7 +850,7 @@ function renderContinuousReader() {
     const position = selectedPage - start + 2;
     const total = end - start + 1;
     const progress = Math.round((position / total) * 100);
-    $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${position}/${total}쪽` : `임시 ${number}화 · 컷 ${position}/${total} · 원본 ${selectedPage+1}쪽`;
+    $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${position}/${total}쪽` : `${number}화 · 컷 ${position}/${total} · 원본 ${selectedPage+1}쪽`;
     $("#episodeProgress").textContent = `${progress}%`;
     $("#episodeProgressBar").style.width = `${progress}%`;
     localStorage.setItem(progressKey(selectedWork),String(selectedPage));
@@ -728,10 +995,96 @@ function saveEpisodeTitle() {
   $("#agentError").textContent = `${selectedWork.episodes[episodeIndex][0]}화 제목을 저장했습니다.`;
 }
 
+function saveEpisodeRange() {
+  if (!selectedWork) return;
+  const episodeIndex = episodeIndexForPage(selectedWork,selectedPage+1);
+  const episode = selectedWork.episodes[episodeIndex];
+  const start = Number($("#agentEpisodeStart").value);
+  const end = Number($("#agentEpisodeEnd").value);
+  const previous = selectedWork.episodes[episodeIndex-1];
+  const next = selectedWork.episodes[episodeIndex+1];
+  const invalid = !Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end > selectedWork.count || start > end || (!previous && start !== 1) || (!next && end !== selectedWork.count) || (previous && start <= previous[2]) || (next && end >= next[3]);
+  if (invalid) {
+    loadAgentPageDraft();
+    $("#agentError").textContent = `1~${selectedWork.count}쪽 안에서 앞뒤 회차와 겹치지 않게 입력해 주세요.`;
+    return;
+  }
+  episode[2] = start;
+  episode[3] = end;
+  if (previous) previous[3] = start-1;
+  if (next) next[2] = end+1;
+  saveEpisodeStructure(selectedWork);
+  selectedEpisode = episodeIndex;
+  selectedPage = Math.min(Math.max(selectedPage,start-1),end-1);
+  renderEpisodeList();
+  renderContinuousReader();
+  showPage(selectedPage);
+  $("#agentError").textContent = `${episode[0]}화 범위를 ${start}~${end}쪽으로 저장했습니다.`;
+}
+
+function pageTextFor(work,pageIndex) {
+  const confirmed = localStorage.getItem(agentDraftKey(work,pageIndex))?.trim();
+  if (confirmed) return confirmed;
+  try { return JSON.parse(localStorage.getItem(ocrDraftKey(work,pageIndex)) || "null")?.text?.trim() || ""; }
+  catch { return ""; }
+}
+
+function collectPageTextsIntoScript() {
+  if (!selectedWork) return;
+  const sections = Array.from({length:selectedWork.count},(_,pageIndex) => {
+    const text = pageTextFor(selectedWork,pageIndex);
+    return text ? `[${pageIndex+1}쪽]\n${text}` : "";
+  }).filter(Boolean);
+  if (!sections.length) {
+    setServerStatus("먼저 읽기·편집에서 페이지 문장을 입력하거나 OCR을 만들어 주세요.","error");
+    return;
+  }
+  $("#workScript").value = sections.join("\n\n").slice(0,50000);
+  $("#scriptLength").textContent = String($("#workScript").value.length);
+  markPublishingChanged();
+  setServerStatus(`${sections.length}쪽의 문장을 대본에 모았습니다. 저장 전 확인해 주세요.`,"ready");
+}
+
+function analyzeTextSafety(work) {
+  const sources = [...work.episodes.map((episode) => episode[1]), ...Array.from({length:work.count},(_,page) => pageTextFor(work,page)), draftFor(work)?.script || "", work === selectedWork ? $("#workScript")?.value || "" : ""];
+  const text = sources.join("\n");
+  const rules = [
+    ["신체 위해·죽음",/(죽이|죽었|죽음|살해|피를|유혈|칼로|총을|폭력)/g],
+    ["싸움·공격",/(때리|공격|싸움|복싱|발차기|주먹)/g],
+    ["공포·위협",/(무서|공포|협박|위협|괴물)/g]
+  ];
+  return rules.map(([label,pattern]) => ({label,matches:[...new Set(text.match(pattern) || [])]})).filter((item) => item.matches.length);
+}
+
+function analyzePrivacyCandidates(work) {
+  const text = Array.from({length:work.count},(_,page) => pageTextFor(work,page)).join("\n");
+  const rules = [
+    ["전화번호",/(?:01[016789])[- .]?\d{3,4}[- .]?\d{4}/g],
+    ["이메일",/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi],
+    ["학교명",/[가-힣]{2,15}(?:초등학교|중학교|고등학교)/g],
+    ["학년·반",/(?:[1-6]\s*학년|[1-6]\s*[-학년 ]\s*[1-9]\s*반?)/g],
+    ["이름 표기 후보",/(?:이름|본명|작가|글|그림)\s*[:：]?\s*[가-힣]{2,4}/g],
+    ["주소·위치 후보",/(?:주소|사는 곳|동네|아파트)\s*[:：]?\s*[^\n]{2,30}/g]
+  ];
+  return rules.map(([label,pattern]) => ({label,matches:[...new Set(text.match(pattern) || [])]})).filter((item) => item.matches.length);
+}
+
+function renderReviewCard() {
+  if (!selectedWork) return;
+  const findings = analyzeTextSafety(selectedWork);
+  const privacy = analyzePrivacyCandidates(selectedWork);
+  const findingText = findings.length ? findings.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 위험 표현을 찾지 못했습니다.";
+  const privacyText = privacy.length ? privacy.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 정형 개인정보 후보를 찾지 못했습니다.";
+  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${escapeHtml(selectedWork.notice)}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p><section class="content-review-result" data-state="${privacy.length ? "attention" : "clear"}"><strong>${privacy.length ? "개인정보 후보가 있습니다." : "개인정보 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(privacyText)}</p><p>실명과 손글씨 OCR 누락은 자동으로 확정할 수 없으므로 원본을 직접 확인해야 합니다.</p></section><section class="content-review-result" data-state="${findings.length ? "attention" : "clear"}"><strong>${findings.length ? "텍스트에서 보호자 확인이 필요한 표현이 있습니다." : "콘텐츠 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(findingText)}</p><p>그림 속 장면은 자동 판정하지 않았습니다. 운영자가 원본 이미지를 직접 확인해야 합니다.</p><button id="contentReviewButton" type="button">다시 확인</button></section>`;
+  $("#contentReviewButton").addEventListener("click",renderReviewCard);
+}
+
 function showTab(name) {
   document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active",button.dataset.tab === name));
   document.querySelectorAll("[data-panel]").forEach((panel) => { const active = panel.dataset.panel === name; panel.classList.toggle("active",active); panel.hidden = !active; });
   if (name === "publishing") renderPublishingEditor();
+  if (name === "materials") { renderPresentationFiles(); renderPresentationSlide(); }
+  if (name === "review") renderReviewCard();
 }
 
 function selectCurrentPageAsCover() {
@@ -759,6 +1112,7 @@ function saveWorkTitle() {
 }
 
 async function initializeEditor() {
+  await loadImportedPages();
   await loadEditorServerState();
   renderCards();
   const requestedWorkValue = pageParams.get("work");
@@ -774,7 +1128,7 @@ $("#singleModeButton").addEventListener("click",() => setReaderMode("single"));
 $("#continuousModeButton").addEventListener("click",() => setReaderMode("continuous"));
 $("#previousEpisode").addEventListener("click",() => changeEpisode(-1));
 $("#nextEpisode").addEventListener("click",() => changeEpisode(1));
-$("#episodeListButton").addEventListener("click",() => showTab("episodes"));
+$("#episodeListButton").addEventListener("click",() => { showTab("pages"); setReaderMode("single"); showPage(selectedPage); });
 $("#zoomOutButton").addEventListener("click",() => setZoom(zoom-.25));
 $("#zoomInButton").addEventListener("click",() => setZoom(zoom+.25));
 $("#fitButton").addEventListener("click",() => setZoom(1));
@@ -788,11 +1142,15 @@ $("#ocrDraftText").addEventListener("input",() => {
   $("#ocrUseButton").hidden = !$("#ocrDraftText").value.trim();
 });
 $("#agentEditorForm").addEventListener("submit",runPageAgent);
+$("#claudeAgentButton").addEventListener("click",runClaudePageAgent);
 $("#agentEpisodeTitle").addEventListener("change",saveEpisodeTitle);
 $("#agentEpisodeTitle").addEventListener("keydown",(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } });
+$("#saveEpisodeRangeButton").addEventListener("click",saveEpisodeRange);
+$("#cameraImageInput").addEventListener("change",async (event) => { await importPageImages(event.currentTarget.files); event.currentTarget.value = ""; });
+$("#fileImageInput").addEventListener("change",async (event) => { await importPageImages(event.currentTarget.files); event.currentTarget.value = ""; });
 $("#agentPageText").addEventListener("input",() => { if (selectedWork) localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value); });
 $("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
-$("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
+$("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentExternalConsent").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
 $("#setCurrentCoverButton").addEventListener("click",selectCurrentPageAsCover);
 $("#workTitleInput").addEventListener("change",saveWorkTitle);
 $("#workTitleInput").addEventListener("keydown",(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } });
@@ -807,8 +1165,22 @@ $("#workScript").addEventListener("input",() => {
   $("#scriptLength").textContent = String($("#workScript").value.length);
   markPublishingChanged();
 });
+$("#collectPageTextButton").addEventListener("click",collectPageTextsIntoScript);
+$("#presentationFileInput").addEventListener("change",async (event) => { await importPresentationFiles(event.currentTarget.files); event.currentTarget.value = ""; });
+$("#presentationPrevious").addEventListener("click",() => renderPresentationSlide(presentationSlideIndex-1));
+$("#presentationNext").addEventListener("click",() => renderPresentationSlide(presentationSlideIndex+1));
+$("#presentationFullscreen").addEventListener("click",async () => {
+  try { if (!document.fullscreenElement) await $("#webPresentation").requestFullscreen(); else await document.exitFullscreen(); }
+  catch { $("#presentationStatus").textContent = "이 브라우저에서는 전체화면 발표를 열 수 없습니다."; }
+});
 $("#publishingEditorForm").addEventListener("submit",savePublishingEditor);
 $("#contrastButton").addEventListener("click",(event) => { const active = document.body.classList.toggle("high-contrast"); event.currentTarget.setAttribute("aria-pressed",String(active)); });
+$("#autoTurnButton").addEventListener("click",(event) => {
+  autoTurnEnabled = !autoTurnEnabled;
+  event.currentTarget.setAttribute("aria-pressed",String(autoTurnEnabled));
+  event.currentTarget.textContent = autoTurnEnabled ? "자동 끄기" : "자동 넘김";
+  if (autoTurnEnabled) scheduleAutoTurn(); else window.clearTimeout(autoTurnTimer);
+});
 $("#readerFullscreenButton").addEventListener("click",async () => {
   try { if (!document.fullscreenElement) await $("#workspace").requestFullscreen(); else await document.exitFullscreen(); }
   catch { $("#readerMessage").textContent = "이 브라우저에서는 전체화면을 열 수 없습니다."; }
@@ -818,6 +1190,11 @@ setupPanControls();
 setupCropControls();
 document.addEventListener("keydown",(event) => {
   if (!selectedWork || $("#workspace").hidden || event.target.matches("input,textarea,select")) return;
+  if (!document.querySelector('[data-panel="materials"]').hidden) {
+    if (event.key === "ArrowLeft") renderPresentationSlide(presentationSlideIndex-1);
+    if (event.key === "ArrowRight" || event.key === " ") renderPresentationSlide(presentationSlideIndex+1);
+    return;
+  }
   if (readerMode === "single" && event.key === "ArrowLeft") showPage(selectedPage-1);
   if (readerMode === "single" && event.key === "ArrowRight") showPage(selectedPage+1);
   if (readerMode === "single" && (event.key === "+" || event.key === "=")) setZoom(zoom+.25);
@@ -826,6 +1203,7 @@ document.addEventListener("keydown",(event) => {
   if (event.key === "2") setReaderMode("continuous");
 });
 $("#closeWorkspace").addEventListener("click",() => {
+  stopAutoTurn();
   if (episodeFullscreenMode) { leaveEpisodeFullscreen(); return; }
   if (readerOnlyMode) { window.location.href = "./index.html#home"; return; }
   $("#workspace").hidden = true; $("#demoGrid").hidden = false; window.scrollTo({top:0,behavior:"smooth"});

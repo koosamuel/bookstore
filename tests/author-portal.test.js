@@ -99,6 +99,30 @@ test("작품 상세의 표지를 누르면 전체화면 그림책 리더가 열�
   assert.match(css, /\.detail-cover-trigger \{[^}]*cursor:zoom-in/s);
 });
 
+test("그림책은 한 페이지 맞춤·책장 전환·자동 넘김을 제공한다", () => {
+  const app = read("app.js");
+  const css = read("styles.css");
+  const demo = read("demo.js");
+  const demoHtml = read("demo.html");
+  const demoCss = read("demo.css");
+  assert.match(app, /id="autoPageButton"/);
+  assert.match(app, /schedulePictureBookAutoPlay/);
+  assert.match(css, /@keyframes pageTurnNext/);
+  assert.match(demoHtml, /id="autoTurnButton"/);
+  assert.match(demo, /scheduleAutoTurn/);
+  assert.match(demoCss, /body\.reader-only \.page-viewer \{[^}]*height:calc\(100dvh/s);
+});
+
+test("댓글은 악플·위협·개인정보를 등록 전과 서버에서 중복 점검한다", () => {
+  const app = read("app.js");
+  const sql = read("supabase/engagement.sql");
+  assert.match(app, /작가나 작품을 비하하는 표현/);
+  assert.match(app, /위협하거나 해치는 표현/);
+  assert.match(app, /id="commentFilterStatus"/);
+  assert.match(sql, /unsafe comment/);
+  assert.match(sql, /normalized_body/);
+});
+
 test("마이 탭은 운영자 이메일과 비밀번호를 Supabase에서 검증한 뒤에만 열린다", () => {
   const html = read("index.html");
   const app = read("app.js");

@@ -54,6 +54,8 @@ const PICTURE_BOOK_DEMOS = {
 };
 let pictureBookPage = 0;
 let activePictureBookId = "B002";
+let pictureBookAutoPlay = false;
+let pictureBookAutoTimer = null;
 const ENGAGEMENT_STORAGE_KEY = "bingo-engagement-v1";
 const ENGAGEMENT_SESSION_KEY = "bingo-reader-session";
 let engagementMode = "loading";
@@ -264,7 +266,20 @@ function openBook(id) {
   recordBookEngagement(id, false);
 }
 
-function openPictureBook(bookId, pageIndex) {
+function stopPictureBookAutoPlay() {
+  pictureBookAutoPlay = false;
+  window.clearTimeout(pictureBookAutoTimer);
+  pictureBookAutoTimer = null;
+}
+
+function schedulePictureBookAutoPlay() {
+  window.clearTimeout(pictureBookAutoTimer);
+  const demo = PICTURE_BOOK_DEMOS[activePictureBookId];
+  if (!pictureBookAutoPlay || !demo || pictureBookPage >= demo.captions.length - 1) return;
+  pictureBookAutoTimer = window.setTimeout(() => openPictureBook(activePictureBookId, pictureBookPage + 1, "next"), 5000);
+}
+
+function openPictureBook(bookId, pageIndex, direction = "next") {
   activePictureBookId = bookId || activePictureBookId;
   const demo = PICTURE_BOOK_DEMOS[activePictureBookId];
   if (!demo) return;
@@ -274,17 +289,25 @@ function openPictureBook(bookId, pageIndex) {
   const current = pictureBookPage + 1;
   $("#bookDialogContent").innerHTML = `<article class="picture-book-reader">
     <header class="reader-head"><div><span class="data-origin">AI 생성 가상 샘플</span><h2>${escapeHtml(demo.title)}</h2><p>${escapeHtml(demo.author)}</p></div><button class="icon-button" type="button" data-close="bookDialog" aria-label="그림책 닫기">×</button></header>
-    <figure class="picture-page"><img src="${image}" alt="${escapeHtml(caption)}" /><figcaption>${escapeHtml(caption)}</figcaption></figure>
-    <nav class="reader-controls" aria-label="그림책 페이지 이동"><button id="previousPage" type="button" ${pictureBookPage === 0 ? "disabled" : ""}>← 이전</button><strong>${current} / ${demo.captions.length}</strong><button id="nextPage" type="button" ${current === demo.captions.length ? "disabled" : ""}>다음 →</button></nav>
+    <figure class="picture-page turn-${direction === "previous" ? "previous" : "next"}"><img src="${image}" alt="${escapeHtml(caption)}" /><figcaption>${escapeHtml(caption)}</figcaption></figure>
+    <nav class="reader-controls" aria-label="그림책 페이지 이동"><button id="previousPage" type="button" ${pictureBookPage === 0 ? "disabled" : ""}>← 이전</button><strong>${current} / ${demo.captions.length}</strong><button id="nextPage" type="button" ${current === demo.captions.length ? "disabled" : ""}>다음 →</button><button class="auto-page-button" id="autoPageButton" type="button" aria-pressed="${pictureBookAutoPlay}">${pictureBookAutoPlay ? "자동 끄기" : "자동 넘김"}</button></nav>
   </article>`;
   $("#bookDialog").classList.add("reader-dialog");
   $("#bookDialogContent [data-close]").addEventListener("click", () => closePictureBook());
-  $("#previousPage").addEventListener("click", () => openPictureBook(activePictureBookId, pictureBookPage - 1));
-  $("#nextPage").addEventListener("click", () => openPictureBook(activePictureBookId, pictureBookPage + 1));
+  $("#previousPage").addEventListener("click", () => openPictureBook(activePictureBookId, pictureBookPage - 1, "previous"));
+  $("#nextPage").addEventListener("click", () => openPictureBook(activePictureBookId, pictureBookPage + 1, "next"));
+  $("#autoPageButton").addEventListener("click", () => {
+    pictureBookAutoPlay = !pictureBookAutoPlay;
+    if (!pictureBookAutoPlay) window.clearTimeout(pictureBookAutoTimer);
+    openPictureBook(activePictureBookId, pictureBookPage, "next");
+  });
+  if (current === demo.captions.length && pictureBookAutoPlay) stopPictureBookAutoPlay();
+  schedulePictureBookAutoPlay();
   if (current === demo.captions.length) recordBookEngagement(activePictureBookId, true);
 }
 
 function closePictureBook() {
+  stopPictureBookAutoPlay();
   $("#bookDialog").classList.remove("reader-dialog");
   $("#bookDialog").close();
 }
@@ -426,19 +449,29 @@ function engagementPanelMarkup(bookId) {
   const comments = engagementComments[bookId] || [];
   const commentsEnabled = engagementSettings[bookId]?.comments_enabled !== false;
   const commentItems = comments.length ? comments.slice(0,10).map((item) => `<li><p>${escapeHtml(item.body)}</p><small>${escapeHtml(item.reader_label || "승인 독자")} · ${new Date(item.created_at).toLocaleDateString("ko-KR")}</small></li>`).join("") : `<li class="comment-empty">아직 승인된 댓글이 없습니다.</li>`;
-  const form = session && commentsEnabled ? `<form class="comment-form" id="commentForm"><textarea id="commentBody" maxlength="300" placeholder="작품을 존중하는 댓글을 남겨 주세요." required></textarea><small>개인정보·연락처·외부 링크는 입력할 수 없으며 운영자 승인 후 공개됩니다.</small><p class="form-error" id="commentError" role="alert"></p><button type="submit">댓글 검토 요청</button></form>` : `<p class="comment-login-note">${commentsEnabled ? "댓글 작성 기능은 현재 준비 중입니다." : "보호자 요청으로 댓글 기능이 꺼져 있습니다."}</p>`;
+  const form = session && commentsEnabled ? `<form class="comment-form" id="commentForm"><textarea id="commentBody" maxlength="300" placeholder="작품을 존중하는 댓글을 남겨 주세요." required></textarea><small>악플·개인정보·외부 링크를 등록 전에 점검하고, 운영자 승인 후 공개합니다.</small><p class="comment-filter-status" id="commentFilterStatus" role="status">존중하는 표현을 사용해 주세요.</p><p class="form-error" id="commentError" role="alert"></p><button type="submit">댓글 검토 요청</button></form>` : `<p class="comment-login-note">${commentsEnabled ? "댓글 작성 기능은 현재 준비 중입니다." : "보호자 요청으로 댓글 기능이 꺼져 있습니다."}</p>`;
   return `<div class="engagement-summary"><span id="detailViews">조회 ${metric.unique_views}</span><span id="detailCompletions">완독 ${metric.completions}</span><span>승인 댓글 ${comments.length}</span></div><section class="comments-panel"><h3>독자 댓글</h3><ul class="comment-list">${commentItems}</ul>${form}</section>`;
 }
 
 function bindCommentForm(bookId) {
   const form = $("#commentForm");
-  if (form) form.addEventListener("submit", (event) => submitComment(event, bookId));
+  if (!form) return;
+  form.addEventListener("submit", (event) => submitComment(event, bookId));
+  $("#commentBody").addEventListener("input", (event) => {
+    const message = validateComment(event.currentTarget.value.trim());
+    const status = $("#commentFilterStatus");
+    status.textContent = message || "자동 점검을 통과했습니다. 등록 후 운영자가 한 번 더 확인합니다.";
+    status.dataset.state = message ? "blocked" : "clear";
+  });
 }
 
 function validateComment(body) {
   if (body.length < 2) return "댓글을 두 글자 이상 입력해 주세요.";
   if (/(https?:\/\/|www\.|[<>])/i.test(body)) return "외부 링크나 HTML은 입력할 수 없습니다.";
   if (/\b\d{2,4}[- .]?\d{3,4}[- .]?\d{4}\b/.test(body) || /@[\w.-]+\.[a-z]{2,}/i.test(body)) return "연락처나 이메일은 입력할 수 없습니다.";
+  const normalized = body.toLowerCase().replace(/[\s._~!@#$%^&*()+=[\]{}|\\:;"'<>,?/-]+/g, "");
+  if (/(\uc8fd\uc5b4|\uc8fd\uc5ec|\ub54c\ub824|\ud328\ubc84|\uac00\ub9cc\uc548\ub450|\ucc3e\uc544\uac04\ub2e4|\ud611\ubc15)/.test(normalized)) return "위협하거나 해치는 표현은 등록할 수 없습니다.";
+  if (/(\ubcd1\uc2e0|\uba4d\uccad|\ubc14\ubcf4|\ucc10\ub530|\uaebc\uc838|\ubabb\uc0dd\uacbc|\uc7ac\uc218\uc5c6|\ud55c\uc2ec|\uc4f0\ub808\uae30|\ucd5c\uc545|\uad6c\ub824|\ud610\uc624|\ub178\uc7bc)/.test(normalized)) return "작가나 작품을 비하하는 표현을 빼고 다시 써 주세요.";
   return "";
 }
 
@@ -451,7 +484,11 @@ async function submitComment(event, bookId) {
   if (message) return;
   if (engagementMode === "shared") {
     const { error } = await db.rpc("submit_book_comment", { p_book_id:bookId, p_body:body, p_reader_label:"승인 독자" });
-    if (error) { $("#commentError").textContent = error.message?.includes("rate limit") ? "댓글은 10분 동안 3개까지 등록할 수 있습니다." : "댓글을 저장하지 못했습니다."; console.error(error); return; }
+    if (error) {
+      $("#commentError").textContent = error.message?.includes("rate limit") ? "댓글은 10분 동안 3개까지 등록할 수 있습니다." : error.message?.includes("unsafe comment") ? "안전 점검을 통과하지 못했습니다. 표현을 바꿔 주세요." : "댓글을 저장하지 못했습니다.";
+      console.error(error);
+      return;
+    }
   } else {
     const local = readLocalEngagement();
     local.comments.push({ id:`local-${crypto.randomUUID()}`, book_id:bookId, body, reader_label:"승인 독자", status:"pending", created_at:new Date().toISOString() });
@@ -575,41 +612,59 @@ function normalizeBookId(value) {
 
 async function addBook(event) {
   event.preventDefault();
-  const file = $("#bookCover").files[0];
+  const files = Array.from($("#bookPages").files || []).filter((file) => file.type.startsWith("image/"));
   const title = $("#bookTitle").value.trim();
   const author = $("#bookAuthor").value.trim();
   const errorElement = $("#addBookError");
   const button = $("#addBookButton");
   errorElement.textContent = "";
-  if (!file || !title || !author) { errorElement.textContent = "사진, 책 이름, 작가를 모두 입력해 주세요."; return; }
-  if (file.size > 5 * 1024 * 1024) { errorElement.textContent = "사진은 5MB 이하만 등록할 수 있습니다."; return; }
+  if (!isOperatorSession()) { errorElement.textContent = "운영자 로그인 후 작품을 올릴 수 있습니다."; return; }
+  if (!files.length || !title || !author) { errorElement.textContent = "제목, 공개용 작가 별칭, 페이지 이미지를 모두 입력해 주세요."; return; }
+  if (files.length > 100) { errorElement.textContent = "한 번에 100장까지 올릴 수 있습니다."; return; }
+  const oversized = files.find((file) => file.size > 25 * 1024 * 1024);
+  if (oversized) { errorElement.textContent = `${oversized.name} 파일은 25MB보다 큽니다.`; return; }
 
   button.disabled = true;
-  button.textContent = "추가 중…";
+  button.textContent = "비공개 초안 준비 중…";
   const id = nextBookId();
-  const extension = (file.name.split(".").pop() || "jpg").toLowerCase();
-  const objectPath = `${id}-${crypto.randomUUID()}.${extension}`;
+  const uploadedPaths = [];
+  let bookCreated = false;
 
   try {
-    const { error: uploadError } = await db.storage.from("book-covers").upload(objectPath, file, { cacheControl:"3600", upsert:false });
-    if (uploadError) throw uploadError;
-    const { data: publicData } = db.storage.from("book-covers").getPublicUrl(objectPath);
-    let { error: insertError } = await db.from("books").insert({ id, title, author, cover_url:publicData.publicUrl, grade:"전 학년", description:"", data_origin:"actual", publication_status:"draft", guardian_consent:"unconfirmed" });
-    if (insertError?.code === "PGRST204" || insertError?.code === "42703") {
-      ({ error: insertError } = await db.from("books").insert({ id, title, author, cover_url:publicData.publicUrl, grade:"전 학년", description:"" }));
+    const { error: insertError } = await db.from("books").insert({
+      id, title, author, grade:"전 학년", description:"", data_origin:"actual",
+      page_count:files.length, publication_status:"draft", guardian_consent:"unconfirmed"
+    });
+    if (insertError) throw insertError;
+    bookCreated = true;
+
+    const pageRows = [];
+    for (const [index,file] of files.entries()) {
+      button.textContent = `${index + 1}/${files.length}장 비공개 저장 중…`;
+      const extension = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const objectPath = `${id}/${String(index + 1).padStart(3,"0")}-${crypto.randomUUID()}.${extension}`;
+      const { error:uploadError } = await db.storage.from("book-originals").upload(objectPath,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+      if (uploadError) throw uploadError;
+      uploadedPaths.push(objectPath);
+      pageRows.push({book_id:id,page_number:index + 1,original_path:objectPath,review_status:"draft"});
     }
-    if (insertError) {
-      await db.storage.from("book-covers").remove([objectPath]);
-      throw insertError;
-    }
+
+    const { error:pagesError } = await db.from("book_pages").insert(pageRows);
+    if (pagesError) throw pagesError;
     $("#addBookForm").reset();
-    showToast(`‘${title}’ 책을 추가했습니다.`);
+    $("#newBookPanel").open = false;
+    await loadBooks();
+    showToast(`‘${title}’ ${files.length}장을 비공개 초안으로 저장했습니다.`);
+    await openWorkflow(id);
   } catch (error) {
-    errorElement.textContent = "책을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    if (uploadedPaths.length) await db.storage.from("book-originals").remove(uploadedPaths);
+    if (bookCreated) await db.from("books").delete().eq("id",id);
+    const serverSetupMissing = error?.code === "PGRST204" || error?.code === "PGRST205" || error?.code === "42P01" || /book-originals|book_pages|page_count|publication_status|schema cache/i.test(String(error?.message || ""));
+    errorElement.textContent = serverSetupMissing ? "비공개 원본 저장소가 준비되지 않았습니다. Supabase에 child-publishing.sql을 적용해 주세요." : "작품을 저장하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.";
     console.error(error);
   } finally {
     button.disabled = false;
-    button.textContent = "책 추가하기";
+    button.textContent = "비공개 초안으로 저장";
   }
 }
 
@@ -973,6 +1028,11 @@ document.querySelectorAll("[data-primary-tab]").forEach((button) => button.addEv
 $("#myAuthorSelect").addEventListener("change", async (event) => { activeAuthorAlias = event.target.value; authorDashboard = null; authorDashboardMode = "loading"; renderMyDashboard(); await refreshAuthorDashboard(); });
 $("#loginForm").addEventListener("submit", login);
 $("#loginCancelButton").addEventListener("click", () => { pendingPrimaryTab = null; setPrimaryTab("home"); });
+$("#openNewBookButton").addEventListener("click", () => {
+  $("#newBookPanel").open = true;
+  $("#newBookPanel").scrollIntoView({behavior:"smooth",block:"start"});
+  window.setTimeout(() => $("#bookTitle").focus(),250);
+});
 $("#addBookForm").addEventListener("submit", addBook);
 $("#editBookForm").addEventListener("submit", editBook);
 $("#publishingForm").addEventListener("submit", savePublishingMetadata);

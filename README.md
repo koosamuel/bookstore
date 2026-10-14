@@ -84,7 +84,16 @@ supabase/author-portal.sql
 
 합성 샘플에는 `agent-demo.js`의 편집 제안 Agent를 사용할 수 있다. 이 Agent는 브라우저 안에서 공백·문장부호처럼 기계적으로 확인 가능한 후보만 구조화해 제안하며, 이메일·전화번호 등 개인정보 후보가 있으면 실행을 중단한다. 원문은 별도로 보존되고 운영자가 제안을 채택하거나 거절해야 한다.
 
-`supabase/functions/generate-book-content`는 외부 AI를 위한 서버 측 경계만 준비되어 있으며 실제 외부 전송은 계속 비활성화되어 있다. 실제 어린이 작품을 외부 서비스로 전송하기 전에 보호자 동의, 전송 범위, 제공자와 보존 정책을 확정해야 한다. API Key는 브라우저 코드나 저장소에 넣지 않는다.
+`supabase/functions/generate-book-content`는 선택형 Claude 편집 제안을 위한 서버 함수다. 기본값은 외부 전송 비활성화이며, 운영자 로그인·사람의 원문 확인·화면의 전송 동의가 모두 있어야 문장만 전송한다. 이미지와 원본 파일은 전송하지 않고, 전화번호·이메일·학교·이름 표기 등 개인정보 후보가 감지되면 서버에서 요청을 거부한다. 결과는 원문을 직접 바꾸지 않는 최대 5개의 선택 제안으로만 표시한다.
+
+API Key는 브라우저 코드나 저장소에 넣지 않고 Supabase Edge Function 비밀값으로만 설정한다.
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=... CLAUDE_EXTERNAL_AI_ENABLED=true ANTHROPIC_MODEL=claude-sonnet-4-6 --project-ref eidxeualhqvdcxizfmll
+supabase functions deploy generate-book-content --project-ref eidxeualhqvdcxizfmll
+```
+
+연결을 끄려면 `CLAUDE_EXTERNAL_AI_ENABLED=false`로 바꾼다. 실제 어린이 작품에 적용하기 전에는 보호자 동의, 전송 범위, 제공자 보존 정책을 별도로 확정해야 한다.
 
 ## 로컬 실행 환경
 

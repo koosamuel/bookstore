@@ -49,16 +49,17 @@ test("사람이 확인한 실제 작품은 로컬 전용 검토 조건에서만 
 test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
-  assert.match(html, /data-tab="pages">읽기·편집/);
+  assert.match(html, /class="active" type="button" data-tab="pages">읽기·편집/);
   assert.doesNotMatch(html, /data-tab="agent"/);
-  assert.ok(html.indexOf('data-tab="episodes"') < html.indexOf('data-tab="pages"'));
-  assert.match(html, /class="active" type="button" data-tab="episodes">회차/);
-  assert.match(html, /class="panel active" data-panel="episodes"/);
+  assert.doesNotMatch(html, /data-tab="episodes"/);
+  assert.doesNotMatch(html, /data-tab="publishing"/);
+  assert.match(html, /class="panel active" data-panel="pages"/);
   assert.match(html, /class="reading-editing-grid"/);
   assert.match(html, /class="reader-controls"/);
   assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="reading-column"'));
   assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="agent-editor"'));
-  assert.match(readProjectFile("demo.css"), /\.reader-controls \{[^}]*grid-template-columns:minmax\(0,1\.35fr\) minmax\(320px,\.65fr\)/);
+  assert.match(readProjectFile("demo.css"), /\.reading-editing-grid \{[^}]*grid-template-columns:142px minmax\(0,1fr\) minmax\(320px,390px\)/);
+  assert.match(readProjectFile("demo.css"), /\.reader-controls \{[^}]*grid-column:2\/4/);
   assert.match(readProjectFile("demo.css"), /\.reader-status \{[^}]*grid-column:2/);
   assert.match(html, /id="agentEditorForm"/);
   assert.match(html, /id="agentEpisodeTitle"/);
@@ -67,9 +68,8 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /sourceScope:"actual-local-review"/);
   assert.match(js, /localOnly:true/);
   assert.match(js, /data-agent-suggestion/);
-  assert.match(js, /showTab\("episodes"\)/);
-  assert.match(js, /data-episode-start/);
-  assert.match(js, /episode-copy/);
+  assert.match(html, /class="image-navigator"/);
+  assert.match(html, /id="agentEpisodeSelect"/);
   assert.match(js, /function enterEpisodeFullscreen/);
   assert.match(js, /classList\.add\("reader-only"\)/);
   assert.match(js, /requestFullscreen/);
@@ -77,6 +77,9 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);
   assert.match(js, /localStorage\.setItem\(episodeTitleKey/);
   assert.match(js, /function renderEpisodeList/);
+  assert.match(html, /id="agentEpisodeStart"/);
+  assert.match(html, /id="agentEpisodeEnd"/);
+  assert.match(js, /function saveEpisodeRange/);
   assert.match(html, /id="cropBox"/);
   assert.match(html, /data-crop-handle="nw"/);
   assert.match(html, /id="cropResetButton"/);
@@ -87,6 +90,10 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(html, /id="coverTitleEditor"/);
   assert.match(html, /id="workTitleInput"/);
   assert.match(js, /function saveWorkTitle/);
+  assert.match(html, /id="cameraImageInput"[^>]*capture="environment"/);
+  assert.match(html, /id="fileImageInput"[^>]*multiple/);
+  assert.match(js, /indexedDB\.open\("bingo-bookstore-editor",2\)/);
+  assert.match(js, /function importPageImages/);
   assert.doesNotMatch(`${html}\n${js}`, /PRIVATE EDITOR|대표 데모|임시 제목|안전한 편집 원칙|이 데모 보기/);
 });
 
@@ -110,9 +117,11 @@ test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다",
   const js = readProjectFile("demo.js");
   const css = readProjectFile("demo.css");
   const sql = readProjectFile("supabase/work-editor.sql");
-  assert.match(html, /data-tab="publishing">대본·저장/);
+  assert.match(html, /<summary>대본·서버 저장<\/summary>/);
   assert.doesNotMatch(html, /id="selectCoverButton"/);
   assert.match(html, /id="workScript"/);
+  assert.match(html, /대본 <small>선택 사항<\/small>/);
+  assert.match(html, /id="collectPageTextButton"/);
   assert.match(html, /id="savePublishingButton"/);
   assert.match(js, /from\("work_editor_drafts"\)\.upsert/);
   assert.match(js, /cover_page:selectedCoverPage/);
@@ -123,6 +132,38 @@ test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다",
   assert.match(sql, /enable row level security/);
   assert.match(sql, /auth\.uid\(\) = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'/);
   assert.match(sql, /revoke all on table public\.work_editor_drafts from anon/);
+});
+
+test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 제공한다", () => {
+  const html = readProjectFile("demo.html");
+  const js = readProjectFile("demo.js");
+  assert.match(html, /data-tab="materials">발표자료/);
+  assert.match(html, /id="presentationFileInput"/);
+  assert.match(html, /05_과제제안서\.md/);
+  assert.match(js, /presentation-files/);
+  assert.match(js, /function analyzePrivacyCandidates/);
+  assert.match(js, /function analyzeTextSafety/);
+  assert.match(js, /그림 속 장면은 자동 판정하지 않았습니다/);
+  assert.match(html, /id="webPresentation"/);
+  assert.match(js, /function renderPresentationSlide/);
+  assert.match(js, /presentationFullscreen/);
+});
+
+test("Claude 연결은 운영자 승인형 서버 함수와 개인정보 차단을 사용한다", () => {
+  const html = readProjectFile("demo.html");
+  const js = readProjectFile("demo.js");
+  const edge = readProjectFile("supabase/functions/generate-book-content/index.ts");
+  assert.match(html, /id="agentExternalConsent"/);
+  assert.match(html, /id="claudeAgentButton"/);
+  assert.match(js, /db\.functions\.invoke\("generate-book-content"/);
+  assert.match(js, /externalConsent:true/);
+  assert.match(edge, /https:\/\/api\.anthropic\.com\/v1\/messages/);
+  assert.match(edge, /ANTHROPIC_API_KEY/);
+  assert.match(edge, /CLAUDE_EXTERNAL_AI_ENABLED/);
+  assert.match(edge, /auth\/v1\/user/);
+  assert.match(edge, /containsSensitiveText/);
+  assert.match(edge, /external transfer consent required/);
+  assert.doesNotMatch(edge, /sk-ant-/);
 });
 
 test("개인정보 후보가 있으면 실행을 중단한다", () => {

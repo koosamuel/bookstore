@@ -16,7 +16,7 @@
     <meta name="twitter:image" content="https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site/assets/web/og.png" />
     <link rel="canonical" href="https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site/" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=29" />
+    <link rel="stylesheet" href="./styles.css?v=30" />
     <title>빙고서점</title>
   </head>
   <body>
@@ -30,6 +30,7 @@
     <nav class="primary-tabs" aria-label="주요 화면" role="tablist">
       <button class="primary-tab active" id="homeTab" type="button" role="tab" aria-selected="true" aria-controls="homePanel" data-primary-tab="home"><span aria-hidden="true">●</span> 실시간 홈</button>
       <button class="primary-tab" id="myTab" type="button" role="tab" aria-selected="false" aria-controls="myPanel" data-primary-tab="my"><span aria-hidden="true">♙</span> 마이</button>
+      <a class="primary-tab primary-external-tab" href="https://koodanielmj.github.io/project_mj/" target="_blank" rel="noopener"><span aria-hidden="true">📚</span> 현우 키오스크</a>
     </nav>
 
     <main id="top">
@@ -80,11 +81,11 @@
           <h2 id="demoTitle">어린이 작가 공간</h2>
         </div>
         <div class="demo-preview-grid">
-          <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=reader&amp;from=home&amp;v=17">
+          <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=reader&amp;from=home&amp;v=18">
             <img src="./assets/web/works/01/001_20260930_201748.jpg" alt="스포츠 이야기 모음 첫 페이지" />
             <span><small>작품 01 · 20쪽</small><strong>스포츠 이야기 모음</strong><em>카툰 전체화면 보기</em></span>
           </a>
-          <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=reader&amp;from=home&amp;v=17">
+          <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=reader&amp;from=home&amp;v=18">
             <img src="./assets/web/works/03/001_20260930_203620.jpg" alt="게임 이야기 모음 첫 페이지" />
             <span><small>작품 02 · 12쪽</small><strong>게임 1·2·3 모음집</strong><em>카툰 전체화면 보기</em></span>
           </a>
@@ -137,9 +138,26 @@
       <section class="my-panel" id="myPanel" role="tabpanel" aria-labelledby="myTab" hidden>
         <div class="my-heading">
           <div><p class="eyebrow">MY BOOKSHELF · 안전한 작품 관리</p><h2>마이</h2><p>작품은 보호자·운영자 검토를 통과하기 전까지 공개되지 않습니다.</p></div>
-          <button class="text-button my-manage-button" id="logoutButton" type="button">운영자 로그아웃</button>
+          <div class="my-heading-actions">
+            <button class="my-upload-button" id="openNewBookButton" type="button">새 작품 올리기</button>
+            <button class="text-button my-manage-button" id="logoutButton" type="button">운영자 로그아웃</button>
+          </div>
         </div>
         <div id="myDashboard">
+          <details class="my-new-work" id="newBookPanel">
+            <summary>
+              <span aria-hidden="true">📷</span>
+              <span><strong>새 작품 올리기</strong><small>표지부터 마지막 페이지까지 순서대로 선택하세요.</small></span>
+            </summary>
+            <form id="addBookForm" class="my-new-work-form">
+              <label class="field">작품 제목<input id="bookTitle" type="text" maxlength="100" required /></label>
+              <label class="field">공개용 작가 별칭 <small>실명·학교·학년·반은 입력하지 마세요.</small><input id="bookAuthor" type="text" maxlength="100" required /></label>
+              <label class="field full">페이지 이미지 <small>여러 장을 순서대로 선택하세요. 핸드폰에서는 카메라와 사진 보관함을 사용할 수 있습니다.</small><input id="bookPages" type="file" accept="image/jpeg,image/png,image/webp" multiple required /></label>
+              <p class="private-upload-note full">원본은 비공개 서버에 저장되며, 개인정보·폭력성·저작권·보호자 동의 검토 전에는 서점에 공개되지 않습니다.</p>
+              <p class="form-error full" id="addBookError" role="alert"></p>
+              <button class="primary-button full" id="addBookButton" type="submit">비공개 초안으로 저장</button>
+            </form>
+          </details>
           <div class="my-author-picker">
             <label for="myAuthorSelect"><strong>어린이 작가 별칭</strong><small>실명·학년·반 없이 공개 승인된 별칭으로만 작품을 구분합니다.</small></label>
             <select id="myAuthorSelect" aria-describedby="myAuthorPrivacy"></select>
@@ -153,11 +171,11 @@
           <section class="my-section my-editor-section" aria-labelledby="myEditorTitle">
             <div class="my-section-head"><div><p class="eyebrow">AUTHOR WORKSPACE</p><h3 id="myEditorTitle">작품 편집</h3></div><span>페이지·에피소드·공개 검토</span></div>
             <div class="demo-preview-grid my-editor-grid">
-              <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=edit&amp;from=my&amp;v=17">
+              <a class="demo-preview-card" href="./demo.html?work=0&amp;mode=edit&amp;from=my&amp;v=18">
                 <img src="./assets/web/works/01/001_20260930_201748.jpg" alt="스포츠 이야기 모음 편집 화면" />
                 <span><small>편집 중 · 20쪽</small><strong>스포츠 이야기 모음</strong><em>편집 화면 열기</em></span>
               </a>
-              <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=edit&amp;from=my&amp;v=17">
+              <a class="demo-preview-card" href="./demo.html?work=1&amp;mode=edit&amp;from=my&amp;v=18">
                 <img src="./assets/web/works/03/001_20260930_203620.jpg" alt="게임 이야기 모음 편집 화면" />
                 <span><small>편집 중 · 12쪽</small><strong>게임 1·2·3 모음집</strong><em>편집 화면 열기</em></span>
               </a>
@@ -173,16 +191,6 @@
     <dialog id="bookDialog" class="book-dialog"><div id="bookDialogContent"></div></dialog>
     <dialog id="manageDialog" class="manage-dialog">
       <div class="dialog-head"><div><p class="eyebrow">LIBRARY DESK</p><h2>관리자 모드</h2></div><button class="icon-button" data-close="manageDialog" aria-label="닫기">×</button></div>
-      <section class="admin-section" aria-labelledby="addBookTitle">
-        <h3 id="addBookTitle">새 책 추가</h3>
-        <form id="addBookForm" class="add-book-form">
-          <label class="field">승인된 공개용 책 사진 <small>개인정보가 없는 표지만 등록하세요.</small><input id="bookCover" type="file" accept="image/jpeg,image/png,image/webp" required /></label>
-          <label class="field">책 이름<input id="bookTitle" type="text" maxlength="100" required /></label>
-          <label class="field">작가<input id="bookAuthor" type="text" maxlength="100" required /></label>
-          <p class="form-error" id="addBookError" role="alert"></p>
-          <button class="primary-button" id="addBookButton" type="submit">책 추가하기</button>
-        </form>
-      </section>
       <section class="admin-section" aria-labelledby="loanTitle">
         <h3 id="loanTitle">대여 중인 책</h3>
         <p class="dialog-description">반납된 책의 상태를 다시 ‘대여 가능’으로 바꿀 수 있어요.</p>
@@ -296,6 +304,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./agent-demo.js?v=2" defer></script>
     <script src="./server-api.js?v=1" defer></script>
-    <script src="./app.js?v=29" defer></script>
+    <script src="./app.js?v=30" defer></script>
   </body>
 </html>

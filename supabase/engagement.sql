@@ -138,6 +138,7 @@ declare
   new_comment_id bigint;
   clean_body text := btrim(coalesce(p_body, ''));
   clean_label text := '승인 독자';
+  normalized_body text := lower(regexp_replace(btrim(coalesce(p_body, '')), '[[:space:][:punct:]]', '', 'g'));
 begin
   if auth.uid() is null then
     raise exception 'authentication required';
@@ -160,6 +161,18 @@ begin
     where created_by = auth.uid() and created_at > now() - interval '10 minutes'
   ) >= 3 then
     raise exception 'comment rate limit exceeded';
+  end if;
+
+  if char_length(clean_body) < 2 or char_length(clean_body) > 300 then
+    raise exception 'invalid comment length';
+  end if;
+
+  if clean_body ~* '(https?://|www\.|[<>]|[0-9]{2,4}[- .]?[0-9]{3,4}[- .]?[0-9]{4}|@[[:alnum:]_.-]+\.[[:alpha:]]{2,})' then
+    raise exception 'unsafe comment';
+  end if;
+
+  if normalized_body ~ '(죽어|죽여|때려|패버|가만안두|찾아간다|협박|병신|멍청|바보|찐따|꺼져|못생겼|재수없|한심|쓰레기|최악|구려|혐오|노잼)' then
+    raise exception 'unsafe comment';
   end if;
 
   insert into public.book_comments (book_id, created_by, reader_label, body, status)
