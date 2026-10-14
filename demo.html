@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=29" />
+    <link rel="stylesheet" href="./demo.css?v=30" />
   </head>
   <body>
     <header class="demo-header">
@@ -27,7 +27,20 @@
             <div><p class="eyebrow">EPISODES</p><h3 id="publicEpisodeHeading">회차 선택</h3></div>
             <strong id="publicEpisodeCount"></strong>
           </header>
-          <div class="public-episode-list" id="publicEpisodeList"></div>
+          <div class="public-episode-layout">
+            <div class="public-episode-list" id="publicEpisodeList"></div>
+            <section class="public-comments" aria-labelledby="publicCommentsTitle">
+              <header><div><p class="eyebrow">COMMENTS</p><h3 id="publicCommentsTitle">응원 댓글</h3></div><strong id="publicCommentCount">0개</strong></header>
+              <ul id="publicCommentList" class="public-comment-list"></ul>
+              <form id="publicCommentForm" class="public-comment-form">
+                <label for="publicCommentBody">댓글</label>
+                <textarea id="publicCommentBody" maxlength="300" rows="3" placeholder="작품을 존중하는 응원을 남겨 주세요." required></textarea>
+                <small>개인정보·외부 링크·모욕·위협 표현을 먼저 점검하고, 운영자 승인 후 공개합니다.</small>
+                <p id="publicCommentStatus" role="status">이 기기에 검토 대기로 저장됩니다.</p>
+                <button type="submit">댓글 검토 요청</button>
+              </form>
+            </section>
+          </div>
         </section>
 
         <nav class="tabs" aria-label="편집 메뉴">
@@ -116,6 +129,11 @@
                   <button id="nextEpisode" type="button">다음 화</button>
                 </nav>
               </section>
+              <nav class="reader-episode-completion" id="readerEpisodeCompletion" aria-label="회차 완료" hidden>
+                <span id="readerEpisodeCompletionLabel">이번 화를 다 읽었습니다.</span>
+                <button id="continueEpisodeButton" type="button">다음 화 이어서 보기</button>
+                <button id="completionEpisodeListButton" type="button">회차 목록</button>
+              </nav>
             </div>
             <div class="agent-editor">
               <header class="agent-editor-head"><h3>AI 편집 에이전트</h3><span class="agent-local-chip">로컬 기본</span></header>
@@ -227,7 +245,7 @@
                 </article>
                 <article class="web-slide" data-web-slide hidden>
                   <p class="web-slide-number">04 · 실제 구현과 검증</p><h3>핵심 흐름을 작동 화면과 테스트로 확인했습니다</h3>
-                  <dl class="web-slide-metrics"><div><dt>3종 · 73쪽</dt><dd>실제 작품 자료 정리</dd></div><div><dt>33 / 33</dt><dd>자동 테스트 통과</dd></div><div><dt>Claude 응답</dt><dd>합성 비민감 문장 확인</dd></div><div><dt>공개 차단</dt><dd>개인정보 합성 시연</dd></div></dl>
+                  <dl class="web-slide-metrics"><div><dt>3종 · 72쪽</dt><dd>개인정보 제외 공개본</dd></div><div><dt>33 / 33</dt><dd>자동 테스트 통과</dd></div><div><dt>Claude 응답</dt><dd>합성 비민감 문장 확인</dd></div><div><dt>공개 차단</dt><dd>개인정보 합성 시연</dd></div></dl>
                   <p class="web-slide-takeaway">시연: 로그인 → 이미지 가져오기 → 회차 편집 → AI 제안 → 안전 검토 → 전체화면 읽기</p>
                 </article>
                 <article class="web-slide web-slide-kiosk" data-web-slide hidden>
@@ -269,6 +287,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=26"></script>
+    <script src="./demo.js?v=27"></script>
   </body>
 </html>

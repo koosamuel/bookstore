@@ -175,7 +175,12 @@ test("실제 개인정보를 노출하지 않는 합성 작품으로 공개 차�
   assert.match(css, /\.privacy-gate-notice/);
   assert.match(asset, /합성 데모/);
   assert.match(asset, /실제 어린이 정보 아님/);
-  assert.doesNotMatch(js, /assets\/web\/works\/02\//);
+  assert.match(js, /title: "도깨비 장편 만화"/);
+  assert.match(js, /pageNumberOffset: 1/);
+  assert.doesNotMatch(js, /001_20260930_202207\.jpg/);
+  const safeWorkFiles = fs.readdirSync(path.join(projectRoot,"assets/web/works/02")).filter((name) => name.endsWith(".jpg"));
+  assert.equal(safeWorkFiles.length,40);
+  assert.ok(safeWorkFiles.every((name) => !name.startsWith("001_")));
 });
 
 test("Claude 연결은 운영자 승인형 서버 함수와 개인정보 차단을 사용한다", () => {

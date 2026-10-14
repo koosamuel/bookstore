@@ -27,6 +27,7 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .public-episode-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; padding:1rem 1.1rem; border-radius:18px; background:var(--mint); }
 .public-episode-heading h3 { margin:.25rem 0 0; font-size:1.45rem; }
 .public-episode-heading>strong { color:#536d66; }
+.public-episode-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); gap:1rem; align-items:start; }
 .public-episode-list { display:grid; gap:.75rem; }
 .public-episode-card { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:1rem; align-items:center; width:100%; min-height:116px; padding:.75rem; border:1px solid var(--line); border-radius:18px; color:var(--ink); background:#fbfdfc; text-align:left; cursor:pointer; }
 .public-episode-card:hover { border-color:#8fbbae; background:#f4fbf8; }
@@ -35,6 +36,22 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .public-episode-card-copy strong { font-size:1.08rem; }
 .public-episode-card-copy small { color:#6b7d78; }
 .public-episode-card-open { padding:.5rem .75rem; border-radius:999px; color:var(--green); background:var(--mint); font-size:.8rem; font-weight:900; }
+.public-comments { position:sticky; top:1rem; display:grid; gap:.8rem; padding:1rem; border:1px solid var(--line); border-radius:18px; background:#fbfdfc; }
+.public-comments>header { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
+.public-comments h3 { margin:.2rem 0 0; font-size:1.25rem; }
+.public-comments>header>strong { color:#60736e; font-size:.8rem; }
+.public-comment-list { display:grid; gap:.55rem; max-height:230px; margin:0; padding:0; overflow:auto; list-style:none; }
+.public-comment-list li { padding:.7rem .75rem; border-radius:12px; background:var(--mint); line-height:1.5; }
+.public-comment-list li small { display:block; margin-top:.25rem; color:#60736e; }
+.public-comment-list .comment-empty { color:#60736e; background:#f3f6f5; }
+.public-comment-form { display:grid; gap:.55rem; padding-top:.75rem; border-top:1px solid var(--line); }
+.public-comment-form label { font-weight:850; }
+.public-comment-form textarea { width:100%; padding:.7rem; resize:vertical; border:2px solid var(--line); border-radius:12px; color:var(--ink); background:white; font:inherit; line-height:1.5; }
+.public-comment-form textarea:focus { outline:3px solid #1677ff33; border-color:var(--green); }
+.public-comment-form small,.public-comment-form p { margin:0; color:#60736e; font-size:.76rem; line-height:1.45; }
+.public-comment-form p[data-state="blocked"] { color:#a34131; font-weight:800; }
+.public-comment-form p[data-state="clear"] { color:var(--green); font-weight:800; }
+.public-comment-form button { min-height:44px; border:0; border-radius:12px; color:white; background:var(--green); font-weight:850; cursor:pointer; }
 .tabs { display:flex; gap:.5rem; margin:1.5rem 0; padding:.4rem; border-radius:16px; background:#f0f5f3; }
 .tabs button { flex:1; padding:.75rem; border:0; border-radius:12px; background:transparent; color:#60736e; font-weight:800; cursor:pointer; }
 .tabs button.active { background:white; color:var(--green); box-shadow:0 5px 16px #16483a12; }
@@ -109,6 +126,10 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .episode-navigation { position:sticky; bottom:1rem; display:grid; grid-template-columns:1fr 1fr 1fr; gap:.6rem; margin:1.5rem auto 0; padding:.7rem; border:1px solid var(--line); border-radius:18px; background:#fffffff2; box-shadow:0 8px 28px #173b3424; backdrop-filter:blur(8px); }
 .episode-navigation button { min-height:48px; border:1px solid var(--line); border-radius:12px; background:white; color:var(--green); font-size:18px; font-weight:800; cursor:pointer; }
 .episode-navigation button:disabled { opacity:.4; cursor:not-allowed; }
+.reader-episode-completion { display:flex; align-items:center; justify-content:center; gap:.6rem; padding:.75rem; border:1px solid var(--line); border-radius:16px; background:#fffffff2; box-shadow:0 8px 28px #173b3424; }
+.reader-episode-completion span { font-weight:800; }
+.reader-episode-completion button { min-height:44px; padding:.65rem .9rem; border:1px solid #ffffff38; border-radius:12px; color:white; background:var(--green); font-weight:850; cursor:pointer; }
+.reader-episode-completion button:last-child { color:var(--green); background:white; border-color:var(--line); }
 .transcript-note { margin:1rem 0; padding:1rem 1.1rem; border:1px dashed #bd9941; border-radius:16px; background:var(--warn); }
 .transcript-note p { margin:.35rem 0 0; color:#6f5812; line-height:1.65; }
 .image-navigator { position:sticky; top:1rem; display:grid; gap:.35rem; min-width:0; padding:.75rem; border:1px solid var(--line); border-radius:16px; background:#fbfdfc; }
@@ -182,6 +203,11 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .content-review-result[data-state="attention"] { color:#713b1d; background:#fff3df; }
 .content-review-result p { margin:0; line-height:1.55; }
 .content-review-result button { justify-self:start; min-height:42px; padding:.55rem .8rem; border:1px solid var(--green); border-radius:10px; color:var(--green); background:white; font-weight:850; cursor:pointer; }
+.local-comment-review-list { display:grid; gap:.55rem; }
+.local-comment-review-list article { display:flex; align-items:center; justify-content:space-between; gap:.8rem; padding:.7rem; border:1px solid #e5c980; border-radius:10px; background:white; }
+.local-comment-review-list article p { color:var(--ink); }
+.local-comment-review-list article div { display:flex; flex:0 0 auto; gap:.4rem; }
+.local-comment-review-list article button { min-height:38px; padding:.45rem .65rem; }
 .presentation-library { display:grid; gap:1rem; padding:1.25rem; border:1px solid var(--line); border-radius:20px; background:white; }
 .presentation-library>header { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 .presentation-library>header strong { font-size:1.35rem; }.presentation-library>header p,.presentation-library>p { margin:.35rem 0 0; color:#60736e; }
@@ -254,6 +280,8 @@ body.reader-only .episode-progress { margin:0; border-radius:0; background:#2633
 body.reader-only .continuous-reader { gap:0; max-width:780px; }
 body.reader-only .continuous-page img { border-radius:0; box-shadow:none; }
 body.reader-only .continuous-page figcaption { margin:0; padding:7px 10px; color:#9cb1ab; background:#17201d; }
+body.reader-only .reader-episode-completion { position:fixed; right:max(14px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); left:max(14px,env(safe-area-inset-left)); z-index:30; width:min(720px,calc(100% - 28px)); margin:auto; color:white; border-color:#ffffff24; background:#17201df2; backdrop-filter:blur(12px); }
+body.reader-only .reader-episode-completion button:last-child { color:white; border-color:#ffffff38; background:#ffffff12; }
 @media (max-width:760px) { .workspace-head,.reader-toolbar,.reader-status { align-items:flex-start; flex-direction:column; } .demo-grid,.review-flow { grid-template-columns:1fr; } .tabs { overflow:auto; } .tabs button { min-width:110px; min-height:44px; } .page-viewer { grid-template-columns:1fr; } .page-nav { display:none; } .reader-status span { text-align:left; } .reader-actions { width:100%; } .reader-actions button { flex:1 1 auto; } }
 @media (max-width:760px) {
   body { font-size:15px; }
@@ -267,6 +295,8 @@ body.reader-only .continuous-page figcaption { margin:0; padding:7px 10px; color
   .public-episode-browser { gap:.65rem; margin-top:1rem; }
   .public-episode-heading { align-items:flex-start; padding:.8rem; border-radius:13px; }
   .public-episode-heading h3 { font-size:1.15rem; }
+  .public-episode-layout { grid-template-columns:1fr; }
+  .public-comments { position:static; padding:.8rem; border-radius:13px; }
   .public-episode-card { grid-template-columns:88px minmax(0,1fr) auto; gap:.65rem; min-height:88px; padding:.55rem; border-radius:13px; }
   .public-episode-card img { width:88px; border-radius:9px; }
   .public-episode-card-copy strong { font-size:.9rem; }
@@ -312,6 +342,9 @@ body.reader-only .continuous-page figcaption { margin:0; padding:7px 10px; color
   .continuous-reader { gap:.85rem; }
   .episode-navigation { bottom:.5rem; gap:.35rem; margin-top:1rem; padding:.45rem; border-radius:13px; }
   .episode-navigation button { min-height:46px; border-radius:10px; font-size:15px; }
+  .reader-episode-completion { display:grid; grid-template-columns:1fr 1fr; gap:.4rem; padding:.5rem; }
+  .reader-episode-completion span { grid-column:1/-1; text-align:center; font-size:.78rem; }
+  .reader-episode-completion button { min-width:0; padding:.55rem .65rem; font-size:.82rem; }
   .transcript-note { margin:.7rem 0; padding:.75rem .8rem; border-radius:12px; font-size:.82rem; }
   .episode-list { gap:.55rem; }
   .episode-list-head { align-items:flex-start; flex-direction:column; gap:.25rem; padding:.75rem; border-radius:12px; }

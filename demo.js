@@ -7,6 +7,7 @@ const works = [
     firstFile: "001_20260930_201748.jpg",
     timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
     notice: "페이지 순서 확인 완료. 작품명·에피소드 경계·공개용 작가명과 보호자 동의는 확정 전입니다.",
+    contentWarnings: ["싸움·공격 장면", "죽음 표현"],
     episodes: [
       [1,"먼지귀들의 연습",1,3], [2,"이게 복싱?",4,6], [3,"이게 복싱? (2)",7,8],
       [4,"던전",9,11], [5,"이상한 축구",12,16], [6,"난겐 죽이기",17,17], [7,"이게 배드민턴?",18,20]
@@ -20,7 +21,20 @@ const works = [
     firstFile: "001_20260930_203620.jpg",
     timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
     notice: "무기·전투·유혈 표현이 포함될 수 있어 콘텐츠 안내와 권장 연령을 보호자가 검토해야 합니다.",
+    contentWarnings: ["무기·전투 장면", "유혈 표현"],
     episodes: [[1,"게임 이야기 1",2,4],[2,"게임 이야기 2",5,8],[3,"게임 이야기 3",9,12]]
+  },
+  {
+    title: "도깨비 장편 만화",
+    folder: "02_작품_공개선별본",
+    assetFolder: "02",
+    count: 40,
+    firstFile: "002_20260930_202214.jpg",
+    pageNumberOffset: 1,
+    timestamps: ["202214","202301","202322","202405","202415","202431","202439","202453","202502","202522","202531","202546","202556","202616","202629","202645","202700","202731","202754","202827","202940","203005","203025","203048","203057","203132","203145","203201","203209","203223","203230","203242","203250","203306","203315","203329","203339","203351","203404","203415"],
+    notice: "실명·학년·반으로 보이는 정보가 있는 원본 첫 장은 공개 자산에서 제외했습니다. 공개된 40장은 개인정보 육안 검토를 마쳤으며, 싸움·위협 장면은 보호자·운영자가 별도로 확인해야 합니다.",
+    contentWarnings: ["싸움·위협 장면", "무기 표현"],
+    episodes: [[1,"도깨비 이야기",1,40]]
   },
   {
     title: "새 작품 (개인정보 검토 데모)",
@@ -70,7 +84,8 @@ const readerOnlyMode = pageParams.get("mode") === "reader";
 function fileName(work, index) {
   if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.name || `가져온 이미지 ${index + 1}`;
   if (work.files?.[index]) return work.files[index];
-  return `${String(index + 1).padStart(3,"0")}_20260930_${work.timestamps[index]}.jpg`;
+  const sourcePageNumber = index + 1 + (work.pageNumberOffset || 0);
+  return `${String(sourcePageNumber).padStart(3,"0")}_20260930_${work.timestamps[index]}.jpg`;
 }
 
 function imagePath(work, index) {
@@ -414,6 +429,75 @@ function renderPublicEpisodeBrowser() {
     <span class="public-episode-card-open">읽기</span>
   </button>`).join("");
   document.querySelectorAll("[data-public-episode]").forEach((button) => button.addEventListener("click",() => openPublicEpisode(Number(button.dataset.publicEpisode))));
+  renderPublicComments();
+}
+
+function publicCommentStorageKey(work) {
+  return `bingo-reader-comments-${work.folder}`;
+}
+
+function readPublicComments(work = selectedWork) {
+  if (!work) return [];
+  try {
+    const comments = JSON.parse(localStorage.getItem(publicCommentStorageKey(work)) || "[]");
+    return Array.isArray(comments) ? comments.filter((item) => item && typeof item.body === "string") : [];
+  } catch { return []; }
+}
+
+function savePublicComments(comments, work = selectedWork) {
+  if (!work) return;
+  localStorage.setItem(publicCommentStorageKey(work),JSON.stringify(comments));
+}
+
+function validatePublicComment(body) {
+  if (body.length < 2) return "댓글을 두 글자 이상 입력해 주세요.";
+  if (/(https?:\/\/|www\.|[<>])/i.test(body)) return "외부 링크나 HTML은 입력할 수 없습니다.";
+  if (/\b\d{2,4}[- .]?\d{3,4}[- .]?\d{4}\b/.test(body) || /@[\w.-]+\.[a-z]{2,}/i.test(body)) return "연락처나 이메일은 입력할 수 없습니다.";
+  if (/[가-힣]{2,15}(?:초등학교|중학교|고등학교)/.test(body) || /(?:[1-6]\s*학년|[1-6]\s*[-학년 ]\s*[1-9]\s*반?)/.test(body) || /(?:이름|본명|주소)\s*[:：]/.test(body)) return "학교·학년·반·이름·주소는 댓글에 적을 수 없습니다.";
+  const normalized = body.toLowerCase().replace(/[\s._~!@#$%^&*()+=[\]{}|\\:;"'<>,?/-]+/g,"");
+  if (/(죽어|죽여|때려|패버|가만안두|찾아간다|협박)/.test(normalized)) return "위협하거나 해치는 표현은 등록할 수 없습니다.";
+  if (/(병신|멍청|바보|찐따|꺼져|못생겼|재수없|한심|쓰레기|최악|구려|혐오|노잼)/.test(normalized)) return "작가나 작품을 비하하는 표현을 빼고 다시 써 주세요.";
+  return "";
+}
+
+function renderPublicComments() {
+  if (!selectedWork || !$("#publicCommentList")) return;
+  const comments = readPublicComments();
+  const approved = comments.filter((item) => item.status === "approved");
+  const pending = comments.filter((item) => item.status === "pending");
+  $("#publicCommentCount").textContent = `${approved.length}개`;
+  $("#publicCommentList").innerHTML = approved.length
+    ? approved.slice(-8).reverse().map((item) => `<li><p>${escapeHtml(item.body)}</p><small>운영자 승인 · ${new Date(item.createdAt).toLocaleDateString("ko-KR")}</small></li>`).join("")
+    : `<li class="comment-empty">아직 승인된 댓글이 없습니다.</li>`;
+  const status = $("#publicCommentStatus");
+  status.textContent = pending.length ? `내 검토 대기 댓글 ${pending.length}개 · 승인 전에는 다른 독자에게 보이지 않습니다.` : "이 기기에 검토 대기로 저장됩니다.";
+  status.dataset.state = "";
+}
+
+function submitPublicComment(event) {
+  event.preventDefault();
+  if (!selectedWork) return;
+  const input = $("#publicCommentBody");
+  const body = input.value.trim();
+  const message = validatePublicComment(body);
+  if (message) {
+    $("#publicCommentStatus").textContent = message;
+    $("#publicCommentStatus").dataset.state = "blocked";
+    return;
+  }
+  const comments = readPublicComments();
+  const recentCount = comments.filter((item) => item.status === "pending" && Date.now() - Number(item.createdAt || 0) < 600000).length;
+  if (recentCount >= 3) {
+    $("#publicCommentStatus").textContent = "댓글은 10분 동안 3개까지 검토 요청할 수 있습니다.";
+    $("#publicCommentStatus").dataset.state = "blocked";
+    return;
+  }
+  comments.push({ id:crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, body, status:"pending", createdAt:Date.now() });
+  savePublicComments(comments);
+  input.value = "";
+  renderPublicComments();
+  $("#publicCommentStatus").textContent = "댓글을 검토 대기로 저장했습니다. 운영자가 승인하면 공개됩니다.";
+  $("#publicCommentStatus").dataset.state = "clear";
 }
 
 function showPublicEpisodeIndex({ exitBrowserFullscreen = true } = {}) {
@@ -425,6 +509,8 @@ function showPublicEpisodeIndex({ exitBrowserFullscreen = true } = {}) {
   document.title = `${selectedWork.title} · 회차 목록`;
   $("#closeWorkspace").textContent = "서점으로";
   $("#publicEpisodeBrowser").hidden = false;
+  $("#readerEpisodeCompletion").hidden = true;
+  renderPublicComments();
   document.querySelectorAll("[data-panel]").forEach((panel) => { panel.hidden = true; panel.classList.remove("active"); });
   if (exitBrowserFullscreen && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
@@ -438,6 +524,7 @@ function openPublicEpisode(index) {
   document.body.classList.remove("episode-index");
   document.body.classList.add("reader-only");
   $("#publicEpisodeBrowser").hidden = true;
+  $("#readerEpisodeCompletion").hidden = true;
   $("#closeWorkspace").textContent = "회차 목록";
   document.title = `${selectedWork.title} · ${selectedWork.episodes[index][0]}화`;
   showTab("pages");
@@ -445,6 +532,24 @@ function openPublicEpisode(index) {
   showPage(selectedPage);
   const fullscreenRequest = $("#workspace").requestFullscreen?.();
   fullscreenRequest?.catch(() => {});
+}
+
+function updateEpisodeCompletion() {
+  const completion = $("#readerEpisodeCompletion");
+  if (!completion || !selectedWork) return;
+  const atEpisodeEnd = readerOnlyMode && publicEpisodeActive && selectedPage === activePageBounds().max;
+  completion.hidden = !atEpisodeEnd;
+  if (!atEpisodeEnd) return;
+  const hasNextEpisode = selectedEpisode < selectedWork.episodes.length - 1;
+  $("#readerEpisodeCompletionLabel").textContent = `${selectedWork.episodes[selectedEpisode][0]}화를 다 읽었습니다.`;
+  $("#continueEpisodeButton").textContent = hasNextEpisode ? "다음 화 이어서 보기" : "회차 목록으로";
+  $("#completionEpisodeListButton").hidden = !hasNextEpisode;
+}
+
+function continuePublicEpisode() {
+  if (!selectedWork || !publicEpisodeActive) return;
+  if (selectedEpisode < selectedWork.episodes.length - 1) openPublicEpisode(selectedEpisode + 1);
+  else showPublicEpisodeIndex();
 }
 
 function activePageBounds() {
@@ -579,6 +684,7 @@ function showPage(index) {
   loadAgentPageDraft();
   if (selectedPage === bounds.max && autoTurnEnabled) stopAutoTurn();
   scheduleAutoTurn();
+  updateEpisodeCompletion();
 }
 
 function progressKey(work) { return `bingo-demo-progress-${work.folder}`; }
@@ -943,8 +1049,10 @@ function renderContinuousReader() {
     $("#episodeProgressBar").style.width = `${progress}%`;
     localStorage.setItem(progressKey(selectedWork),String(selectedPage));
     if (episodeScopedReader) localStorage.setItem(episodeProgressKey(selectedWork,number),String(selectedPage+1));
+    updateEpisodeCompletion();
   },{threshold:[.35,.6]});
   $("#continuousReader").querySelectorAll(".continuous-page").forEach((page) => continuousObserver.observe(page));
+  updateEpisodeCompletion();
 }
 
 function setReaderMode(mode) {
@@ -1156,12 +1264,13 @@ function collectPageTextsIntoScript() {
 function analyzeTextSafety(work) {
   const sources = [...work.episodes.map((episode) => episode[1]), ...Array.from({length:work.count},(_,page) => pageTextFor(work,page)), draftFor(work)?.script || "", work === selectedWork ? $("#workScript")?.value || "" : ""];
   const text = sources.join("\n");
+  const declared = (work.contentWarnings || []).length ? [{label:"등록된 콘텐츠 안내",matches:[...work.contentWarnings]}] : [];
   const rules = [
     ["신체 위해·죽음",/(죽이|죽었|죽음|살해|피를|유혈|칼로|총을|폭력)/g],
     ["싸움·공격",/(때리|공격|싸움|복싱|발차기|주먹)/g],
     ["공포·위협",/(무서|공포|협박|위협|괴물)/g]
   ];
-  return rules.map(([label,pattern]) => ({label,matches:[...new Set(text.match(pattern) || [])]})).filter((item) => item.matches.length);
+  return [...declared,...rules.map(([label,pattern]) => ({label,matches:[...new Set(text.match(pattern) || [])]})).filter((item) => item.matches.length)];
 }
 
 function analyzePrivacyCandidates(work) {
@@ -1189,7 +1298,7 @@ function renderPrivacyGate() {
     : "";
   contentGate.hidden = content.length === 0;
   $("#contentGateDetails").textContent = content.length
-    ? `${content.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ")} · 자동 판정이 아니며 보호자·운영자가 원문 맥락을 확인해야 합니다.`
+    ? `콘텐츠 안내·입력 문장 후보 · ${content.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ")} · 자동 판정이 아니며 보호자·운영자가 원문 맥락을 확인해야 합니다.`
     : "";
 }
 
@@ -1197,10 +1306,28 @@ function renderReviewCard() {
   if (!selectedWork) return;
   const findings = analyzeTextSafety(selectedWork);
   const privacy = analyzePrivacyCandidates(selectedWork);
+  const comments = readPublicComments(selectedWork);
+  const pendingComments = comments.filter((item) => item.status === "pending");
+  const approvedComments = comments.filter((item) => item.status === "approved");
   const findingText = findings.length ? findings.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 위험 표현을 찾지 못했습니다.";
   const privacyText = privacy.length ? privacy.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 정형 개인정보 후보를 찾지 못했습니다.";
-  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${escapeHtml(selectedWork.notice)}</p><p><b>공개 상태:</b> ${privacy.length || selectedWork.publicationBlocked ? "공개 차단 · 개인정보 처리 필요" : "비공개 초안 · 보호자 승인 전"}</p><section class="content-review-result" data-state="${privacy.length ? "attention" : "clear"}"><strong>${privacy.length ? "개인정보 후보가 있어 공개할 수 없습니다." : "개인정보 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(privacyText)}</p><p>실명과 손글씨 OCR 누락은 자동으로 확정할 수 없으므로 원본을 직접 확인해야 합니다.</p></section><section class="content-review-result" data-state="${findings.length ? "attention" : "clear"}"><strong>${findings.length ? "텍스트에서 보호자 확인이 필요한 표현이 있습니다." : "콘텐츠 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(findingText)}</p><p>그림 속 장면은 자동 판정하지 않았습니다. 운영자가 원본 이미지를 직접 확인해야 합니다.</p><button id="contentReviewButton" type="button">다시 확인</button></section>`;
+  const commentItems = pendingComments.length
+    ? pendingComments.map((item) => `<article><p>${escapeHtml(item.body)}</p><div><button type="button" data-local-comment-id="${escapeHtml(item.id)}" data-local-comment-status="approved">승인</button><button type="button" data-local-comment-id="${escapeHtml(item.id)}" data-local-comment-status="rejected">거절</button></div></article>`).join("")
+    : `<p>검토할 댓글이 없습니다.</p>`;
+  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${escapeHtml(selectedWork.notice)}</p><p><b>공개 상태:</b> ${privacy.length || selectedWork.publicationBlocked ? "공개 차단 · 개인정보 처리 필요" : "비공개 초안 · 보호자 승인 전"}</p><section class="content-review-result" data-state="${privacy.length ? "attention" : "clear"}"><strong>${privacy.length ? "개인정보 후보가 있어 공개할 수 없습니다." : "개인정보 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(privacyText)}</p><p>실명과 손글씨 OCR 누락은 자동으로 확정할 수 없으므로 원본을 직접 확인해야 합니다.</p></section><section class="content-review-result" data-state="${findings.length ? "attention" : "clear"}"><strong>${findings.length ? "보호자 확인이 필요한 콘텐츠 안내가 있습니다." : "콘텐츠 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(findingText)}</p><p>그림 속 장면은 자동 판정하지 않았습니다. 운영자가 원본 이미지를 직접 확인해야 합니다.</p><button id="contentReviewButton" type="button">다시 확인</button></section><section class="content-review-result local-comment-review" data-state="${pendingComments.length ? "attention" : "clear"}"><strong>댓글 검토 · 대기 ${pendingComments.length}개 · 승인 ${approvedComments.length}개</strong><p>이 기기의 데모 댓글입니다. 개인정보·모욕·위협 표현을 확인한 뒤 승인해 주세요.</p><div class="local-comment-review-list">${commentItems}</div></section>`;
   $("#contentReviewButton").addEventListener("click",renderReviewCard);
+  document.querySelectorAll("[data-local-comment-id]").forEach((button) => button.addEventListener("click",() => moderatePublicComment(button.dataset.localCommentId,button.dataset.localCommentStatus)));
+}
+
+function moderatePublicComment(id, status) {
+  if (!selectedWork || !["approved","rejected"].includes(status)) return;
+  const comments = readPublicComments(selectedWork);
+  const comment = comments.find((item) => String(item.id) === String(id));
+  if (!comment) return;
+  comment.status = status;
+  comment.reviewedAt = Date.now();
+  savePublicComments(comments,selectedWork);
+  renderReviewCard();
 }
 
 function showTab(name) {
@@ -1257,6 +1384,14 @@ $("#continuousModeButton").addEventListener("click",() => setReaderMode("continu
 $("#previousEpisode").addEventListener("click",() => changeEpisode(-1));
 $("#nextEpisode").addEventListener("click",() => changeEpisode(1));
 $("#episodeListButton").addEventListener("click",() => { if (readerOnlyMode) showPublicEpisodeIndex(); else { showTab("pages"); setReaderMode("single"); showPage(selectedPage); } });
+$("#continueEpisodeButton").addEventListener("click",continuePublicEpisode);
+$("#completionEpisodeListButton").addEventListener("click",() => showPublicEpisodeIndex());
+$("#publicCommentForm").addEventListener("submit",submitPublicComment);
+$("#publicCommentBody").addEventListener("input",(event) => {
+  const message = validatePublicComment(event.currentTarget.value.trim());
+  $("#publicCommentStatus").textContent = message || "자동 점검을 통과했습니다. 등록 후 운영자가 한 번 더 확인합니다.";
+  $("#publicCommentStatus").dataset.state = message ? "blocked" : "clear";
+});
 $("#zoomOutButton").addEventListener("click",() => setZoom(zoom-.25));
 $("#zoomInButton").addEventListener("click",() => setZoom(zoom+.25));
 $("#fitButton").addEventListener("click",() => setZoom(1));

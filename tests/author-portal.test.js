@@ -94,6 +94,9 @@ test("홈 작품은 회차 목록을 거쳐 전체화면으로 읽고, 편집 �
   assert.match(demo, /function activePageBounds/);
   assert.match(demo, /function setupReaderSwipe/);
   assert.match(demo, /function createPageTurnLeaf/);
+  assert.match(demoHtml, /id="readerEpisodeCompletion"/);
+  assert.match(demoHtml, /다음 화 이어서 보기/);
+  assert.match(demo, /function continuePublicEpisode/);
   assert.match(demo, /episodeScopedReader/);
   assert.match(demoCss, /body\.episode-index/);
   assert.match(demo, /selectedWork\.count/);
@@ -131,10 +134,16 @@ test("그림책은 한 페이지 맞춤·책장 전환·자동 넘김을 제공�
 
 test("댓글은 악플·위협·개인정보를 등록 전과 서버에서 중복 점검한다", () => {
   const app = read("app.js");
+  const demoHtml = read("demo.html");
+  const demo = read("demo.js");
   const sql = read("supabase/engagement.sql");
   assert.match(app, /작가나 작품을 비하하는 표현/);
   assert.match(app, /위협하거나 해치는 표현/);
   assert.match(app, /id="commentFilterStatus"/);
+  assert.match(demoHtml, /id="publicCommentForm"/);
+  assert.match(demo, /function validatePublicComment/);
+  assert.match(demo, /function moderatePublicComment/);
+  assert.match(demo, /운영자가 승인하면 공개됩니다/);
   assert.match(sql, /unsafe comment/);
   assert.match(sql, /normalized_body/);
 });

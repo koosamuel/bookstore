@@ -293,5 +293,5 @@ dialog { width:100%; max-width:none; max-height:calc(100dvh - 18px); margin:auto
   .toast { bottom:28px; max-width:min(560px,calc(100vw - 40px)); padding:16px 24px; border-radius:16px; }
 }
 
-@media (min-width:1100px) { .ranking-list { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width:1100px) { .ranking-list,.demo-preview-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
