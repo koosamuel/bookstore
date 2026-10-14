@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-labelledby="title desc">
+  <title id="title">개인정보 검토용 합성 페이지</title>
+  <desc id="desc">실제 어린이 정보가 아닌 가상 이름, 학년과 연락처 형식을 사용한 안전 검토 데모</desc>
+  <rect width="900" height="1200" fill="#fffefa"/>
+  <rect x="45" y="45" width="810" height="1110" rx="34" fill="#ffffff" stroke="#c8ddd5" stroke-width="6"/>
+  <rect x="80" y="80" width="740" height="88" rx="20" fill="#e8f5ef"/>
+  <text x="110" y="135" fill="#08765f" font-family="sans-serif" font-size="34" font-weight="700">합성 데모 · 실제 어린이 정보 아님</text>
+  <text x="110" y="250" fill="#173b34" font-family="sans-serif" font-size="46" font-weight="800">새 작품 신청서</text>
+  <text x="110" y="350" fill="#173b34" font-family="sans-serif" font-size="38">이름: 홍길동 (가상)</text>
+  <line x1="110" y1="380" x2="790" y2="380" stroke="#d6e5df" stroke-width="4"/>
+  <text x="110" y="470" fill="#173b34" font-family="sans-serif" font-size="38">학년·반: 3학년 2반 (가상)</text>
+  <line x1="110" y1="500" x2="790" y2="500" stroke="#d6e5df" stroke-width="4"/>
+  <text x="110" y="590" fill="#173b34" font-family="sans-serif" font-size="38">연락처: 010-0000-0000 (가상)</text>
+  <line x1="110" y1="620" x2="790" y2="620" stroke="#d6e5df" stroke-width="4"/>
+  <rect x="110" y="720" width="680" height="230" rx="28" fill="#fff1ed" stroke="#c14c3b" stroke-width="5"/>
+  <text x="450" y="800" text-anchor="middle" fill="#8e3024" font-family="sans-serif" font-size="40" font-weight="800">개인정보 후보 감지</text>
+  <text x="450" y="865" text-anchor="middle" fill="#744e47" font-family="sans-serif" font-size="32">공개 차단 · 가림 또는 제외 필요</text>
+  <text x="450" y="920" text-anchor="middle" fill="#744e47" font-family="sans-serif" font-size="27">운영자와 보호자가 원본을 확인합니다.</text>
+  <text x="450" y="1070" text-anchor="middle" fill="#60736e" font-family="sans-serif" font-size="25">이 페이지의 모든 정보는 기능 시연을 위한 합성 예시입니다.</text>
+</svg>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=24" />
+    <link rel="stylesheet" href="./demo.css?v=25" />
   </head>
   <body>
     <header class="demo-header">
@@ -120,6 +120,10 @@
             <div class="agent-editor">
               <header class="agent-editor-head"><h3>AI 편집 에이전트</h3><span class="agent-local-chip">로컬 기본</span></header>
               <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
+              <section class="privacy-gate-notice" id="privacyGateNotice" role="alert" hidden>
+                <div><strong>개인정보 후보가 있어 공개할 수 없습니다.</strong><span id="privacyGateDetails"></span></div>
+                <button id="privacyGateReviewButton" type="button">검토 보기</button>
+              </section>
               <form id="agentEditorForm" class="agent-editor-form">
                 <section class="image-importer" aria-labelledby="imageImporterTitle">
                   <div class="image-importer-head">
@@ -269,6 +273,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=24"></script>
+    <script src="./demo.js?v=25"></script>
   </body>
 </html>

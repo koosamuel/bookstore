@@ -21,6 +21,20 @@ const works = [
     timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
     notice: "무기·전투·유혈 표현이 포함될 수 있어 콘텐츠 안내와 권장 연령을 보호자가 검토해야 합니다.",
     episodes: [[1,"게임 이야기 1",2,4],[2,"게임 이야기 2",5,8],[3,"게임 이야기 3",9,12]]
+  },
+  {
+    title: "새 작품 (개인정보 검토 데모)",
+    folder: "privacy_demo",
+    assetFolder: "privacy-demo",
+    count: 1,
+    firstFile: "001_privacy_review_demo.svg",
+    files: ["001_privacy_review_demo.svg"],
+    timestamps: ["privacy-demo"],
+    notice: "합성 정보로 개인정보 감지와 공개 차단 절차를 시연합니다. 실제 어린이 정보는 포함하지 않습니다.",
+    demoPageTexts: ["이름: 홍길동 (가상)\n3학년 2반 (가상)\n연락처: 010-0000-0000 (가상)"],
+    syntheticPrivacyDemo: true,
+    publicationBlocked: true,
+    episodes: [[1,"개인정보 검토",1,1]]
   }
 ];
 
@@ -55,6 +69,7 @@ const readerOnlyMode = pageParams.get("mode") === "reader";
 
 function fileName(work, index) {
   if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.name || `가져온 이미지 ${index + 1}`;
+  if (work.files?.[index]) return work.files[index];
   return `${String(index + 1).padStart(3,"0")}_20260930_${work.timestamps[index]}.jpg`;
 }
 
@@ -384,7 +399,7 @@ function renderCards() {
   $("#demoGrid").innerHTML = works.map((work,index) => `<article class="demo-card">
     <div class="demo-card-cover"><img src="${draftFor(work)?.cover_image_path || imagePath(work,0)}" alt="${work.title} 표지" /></div>
     <div class="demo-card-body"><h2>${work.title}</h2>
-      <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 회차</span></div>
+      <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 회차</span>${work.syntheticPrivacyDemo ? "<span>합성 데모 · 공개 차단</span>" : ""}</div>
       <button type="button" data-open-work="${index}">열기</button>
     </div></article>`).join("");
   document.querySelectorAll("[data-open-work]").forEach((button) => button.addEventListener("click", () => openWork(Number(button.dataset.openWork))));
@@ -737,12 +752,13 @@ function loadAgentPageDraft() {
   $("#selectedCoverLabel").textContent = currentPageIsCover ? `${selectedCoverPage}쪽` : "";
   $("#workTitleInput").value = selectedWork.title;
   $("#setCurrentCoverButton").textContent = currentPageIsCover ? "표지 선택됨" : "표지로 설정";
-  $("#agentPageText").value = localStorage.getItem(agentDraftKey(selectedWork, selectedPage)) || "";
+  $("#agentPageText").value = localStorage.getItem(agentDraftKey(selectedWork, selectedPage)) || selectedWork.demoPageTexts?.[selectedPage] || "";
   $("#agentHumanConfirmed").checked = false;
   $("#agentExternalConsent").checked = false;
   $("#agentError").textContent = "";
   $("#agentResultPanel").hidden = true;
   currentAgentOutput = null;
+  renderPrivacyGate();
 }
 
 function renderAgentSuggestions(output) {
@@ -1117,7 +1133,7 @@ function saveEpisodeRange() {
 function pageTextFor(work,pageIndex) {
   const confirmed = localStorage.getItem(agentDraftKey(work,pageIndex))?.trim();
   if (confirmed) return confirmed;
-  try { return JSON.parse(localStorage.getItem(ocrDraftKey(work,pageIndex)) || "null")?.text?.trim() || ""; }
+  try { return JSON.parse(localStorage.getItem(ocrDraftKey(work,pageIndex)) || "null")?.text?.trim() || work.demoPageTexts?.[pageIndex] || ""; }
   catch { return ""; }
 }
 
@@ -1161,13 +1177,23 @@ function analyzePrivacyCandidates(work) {
   return rules.map(([label,pattern]) => ({label,matches:[...new Set(text.match(pattern) || [])]})).filter((item) => item.matches.length);
 }
 
+function renderPrivacyGate() {
+  const gate = $("#privacyGateNotice");
+  if (!gate || !selectedWork) return;
+  const privacy = analyzePrivacyCandidates(selectedWork);
+  gate.hidden = privacy.length === 0;
+  $("#privacyGateDetails").textContent = privacy.length
+    ? `${privacy.map((item) => item.label).join(" · ")} 항목이 감지되었습니다. 가리거나 제외하고 다시 검토해야 합니다.`
+    : "";
+}
+
 function renderReviewCard() {
   if (!selectedWork) return;
   const findings = analyzeTextSafety(selectedWork);
   const privacy = analyzePrivacyCandidates(selectedWork);
   const findingText = findings.length ? findings.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 위험 표현을 찾지 못했습니다.";
   const privacyText = privacy.length ? privacy.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ") : "OCR·입력 문장에서는 정형 개인정보 후보를 찾지 못했습니다.";
-  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${escapeHtml(selectedWork.notice)}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p><section class="content-review-result" data-state="${privacy.length ? "attention" : "clear"}"><strong>${privacy.length ? "개인정보 후보가 있습니다." : "개인정보 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(privacyText)}</p><p>실명과 손글씨 OCR 누락은 자동으로 확정할 수 없으므로 원본을 직접 확인해야 합니다.</p></section><section class="content-review-result" data-state="${findings.length ? "attention" : "clear"}"><strong>${findings.length ? "텍스트에서 보호자 확인이 필요한 표현이 있습니다." : "콘텐츠 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(findingText)}</p><p>그림 속 장면은 자동 판정하지 않았습니다. 운영자가 원본 이미지를 직접 확인해야 합니다.</p><button id="contentReviewButton" type="button">다시 확인</button></section>`;
+  $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${escapeHtml(selectedWork.notice)}</p><p><b>공개 상태:</b> ${privacy.length || selectedWork.publicationBlocked ? "공개 차단 · 개인정보 처리 필요" : "비공개 초안 · 보호자 승인 전"}</p><section class="content-review-result" data-state="${privacy.length ? "attention" : "clear"}"><strong>${privacy.length ? "개인정보 후보가 있어 공개할 수 없습니다." : "개인정보 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(privacyText)}</p><p>실명과 손글씨 OCR 누락은 자동으로 확정할 수 없으므로 원본을 직접 확인해야 합니다.</p></section><section class="content-review-result" data-state="${findings.length ? "attention" : "clear"}"><strong>${findings.length ? "텍스트에서 보호자 확인이 필요한 표현이 있습니다." : "콘텐츠 텍스트 1차 확인 완료"}</strong><p>${escapeHtml(findingText)}</p><p>그림 속 장면은 자동 판정하지 않았습니다. 운영자가 원본 이미지를 직접 확인해야 합니다.</p><button id="contentReviewButton" type="button">다시 확인</button></section>`;
   $("#contentReviewButton").addEventListener("click",renderReviewCard);
 }
 
@@ -1244,9 +1270,14 @@ $("#agentEpisodeTitle").addEventListener("keydown",(event) => { if (event.key ==
 $("#saveEpisodeRangeButton").addEventListener("click",saveEpisodeRange);
 $("#cameraImageInput").addEventListener("change",async (event) => { await importPageImages(event.currentTarget.files); event.currentTarget.value = ""; });
 $("#fileImageInput").addEventListener("change",async (event) => { await importPageImages(event.currentTarget.files); event.currentTarget.value = ""; });
-$("#agentPageText").addEventListener("input",() => { if (selectedWork) localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value); });
+$("#agentPageText").addEventListener("input",() => {
+  if (!selectedWork) return;
+  localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value);
+  renderPrivacyGate();
+});
+$("#privacyGateReviewButton").addEventListener("click",() => showTab("review"));
 $("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
-$("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentExternalConsent").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
+$("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentExternalConsent").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; renderPrivacyGate(); });
 $("#setCurrentCoverButton").addEventListener("click",selectCurrentPageAsCover);
 $("#workTitleInput").addEventListener("change",saveWorkTitle);
 $("#workTitleInput").addEventListener("keydown",(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } });

@@ -154,6 +154,23 @@ test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 
   assert.doesNotMatch(css, /\.web-slide-cover\s*\{[^}]*display:grid!important/);
 });
 
+test("실제 개인정보를 노출하지 않는 합성 작품으로 공개 차단을 시연한다", () => {
+  const html = readProjectFile("demo.html");
+  const js = readProjectFile("demo.js");
+  const css = readProjectFile("demo.css");
+  const asset = readProjectFile("assets/web/works/privacy-demo/001_privacy_review_demo.svg");
+  assert.match(js, /새 작품 \(개인정보 검토 데모\)/);
+  assert.match(js, /syntheticPrivacyDemo: true/);
+  assert.match(js, /publicationBlocked: true/);
+  assert.match(html, /id="privacyGateNotice"/);
+  assert.match(html, /개인정보 후보가 있어 공개할 수 없습니다/);
+  assert.match(js, /function renderPrivacyGate/);
+  assert.match(css, /\.privacy-gate-notice/);
+  assert.match(asset, /합성 데모/);
+  assert.match(asset, /실제 어린이 정보 아님/);
+  assert.doesNotMatch(js, /assets\/web\/works\/02\//);
+});
+
 test("Claude 연결은 운영자 승인형 서버 함수와 개인정보 차단을 사용한다", () => {
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
