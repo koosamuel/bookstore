@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=28" />
+    <link rel="stylesheet" href="./demo.css?v=29" />
   </head>
   <body>
     <header class="demo-header">
@@ -124,6 +124,10 @@
                 <div><strong>개인정보 후보가 있어 공개할 수 없습니다.</strong><span id="privacyGateDetails"></span></div>
                 <button id="privacyGateReviewButton" type="button">검토 보기</button>
               </section>
+              <section class="content-gate-notice" id="contentGateNotice" role="alert" hidden>
+                <div><strong>폭력·위협 표현 후보가 있습니다.</strong><span id="contentGateDetails"></span></div>
+                <button id="contentGateReviewButton" type="button">검토 보기</button>
+              </section>
               <form id="agentEditorForm" class="agent-editor-form">
                 <section class="image-importer" aria-labelledby="imageImporterTitle">
                   <div class="image-importer-head">
@@ -195,7 +199,7 @@
               <div class="web-slide-stage" id="webSlideStage">
                 <article class="web-slide web-slide-cover active" data-web-slide>
                   <div><p>현우 MJ 어린이 작가 서점</p><h3>아이의 원본을 지키는<br />AI 출판 보조 서점</h3><small>원본 보존 · 선택형 AI 제안 · 사람 승인 · 온라인과 현장 연결</small></div>
-                  <img src="./assets/web/synthetic/public-safety-placeholder.svg" alt="공개본에서 원본 작품 이미지를 제외했다는 안전 안내" />
+                  <img src="./assets/web/works/01/001_20260930_201748.jpg" alt="어린이 작품 원본 예시" />
                 </article>
                 <article class="web-slide" data-web-slide hidden>
                   <p class="web-slide-number">01 · 문제와 사용자</p><h3>원본은 지키고, 출판 준비는 쉽게</h3>
@@ -265,6 +269,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=25"></script>
+    <script src="./demo.js?v=26"></script>
   </body>
 </html>

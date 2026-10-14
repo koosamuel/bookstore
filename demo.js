@@ -3,7 +3,6 @@ const works = [
     title: "스포츠 이야기 모음",
     folder: "01_작품",
     assetFolder: "01",
-    publicDemoOnly: true,
     count: 20,
     firstFile: "001_20260930_201748.jpg",
     timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
@@ -17,7 +16,6 @@ const works = [
     title: "게임 1·2·3 모음집",
     folder: "03_작품",
     assetFolder: "03",
-    publicDemoOnly: true,
     count: 12,
     firstFile: "001_20260930_203620.jpg",
     timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
@@ -77,7 +75,6 @@ function fileName(work, index) {
 
 function imagePath(work, index) {
   if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.url || "";
-  if (work.publicDemoOnly) return "./assets/web/synthetic/public-safety-placeholder.svg";
   return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
 }
 
@@ -1182,11 +1179,17 @@ function analyzePrivacyCandidates(work) {
 
 function renderPrivacyGate() {
   const gate = $("#privacyGateNotice");
-  if (!gate || !selectedWork) return;
+  const contentGate = $("#contentGateNotice");
+  if (!gate || !contentGate || !selectedWork) return;
   const privacy = analyzePrivacyCandidates(selectedWork);
+  const content = analyzeTextSafety(selectedWork);
   gate.hidden = privacy.length === 0;
   $("#privacyGateDetails").textContent = privacy.length
     ? `${privacy.map((item) => item.label).join(" · ")} 항목이 감지되었습니다. 가리거나 제외하고 다시 검토해야 합니다.`
+    : "";
+  contentGate.hidden = content.length === 0;
+  $("#contentGateDetails").textContent = content.length
+    ? `${content.map((item) => `${item.label}: ${item.matches.join(", ")}`).join(" · ")} · 자동 판정이 아니며 보호자·운영자가 원문 맥락을 확인해야 합니다.`
     : "";
 }
 
@@ -1279,6 +1282,7 @@ $("#agentPageText").addEventListener("input",() => {
   renderPrivacyGate();
 });
 $("#privacyGateReviewButton").addEventListener("click",() => showTab("review"));
+$("#contentGateReviewButton").addEventListener("click",() => showTab("review"));
 $("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
 $("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentExternalConsent").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; renderPrivacyGate(); });
 $("#setCurrentCoverButton").addEventListener("click",selectCurrentPageAsCover);

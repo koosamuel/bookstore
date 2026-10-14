@@ -156,6 +156,10 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .privacy-gate-notice div { display:grid; gap:.3rem; }
 .privacy-gate-notice span { color:#744e47; font-size:.8rem; line-height:1.45; }
 .privacy-gate-notice button { flex:0 0 auto; min-height:44px; padding:.55rem .75rem; border:1px solid #a93e30; border-radius:11px; color:#8e3024; background:white; font-weight:900; cursor:pointer; }
+.content-gate-notice { display:flex; align-items:center; justify-content:space-between; gap:.8rem; padding:.9rem 1rem; border:2px solid #d39a25; border-radius:16px; color:#6d4a07; background:#fff7dc; }
+.content-gate-notice div { display:grid; gap:.3rem; }
+.content-gate-notice span { color:#6b5a35; font-size:.8rem; line-height:1.45; }
+.content-gate-notice button { flex:0 0 auto; min-height:44px; padding:.55rem .75rem; border:1px solid #b77c12; border-radius:11px; color:#6d4a07; background:white; font-weight:900; cursor:pointer; }
 .cover-title-editor { display:grid; gap:.7rem; padding:.8rem; border:1px solid #c2dfd5; border-radius:14px; background:var(--mint); }.cover-title-editor>div { display:flex; justify-content:space-between; gap:.7rem; }.cover-title-editor>div span { color:#536d66; font-size:.8rem; font-weight:800; }
 .agent-editor-form select { width:100%; min-height:48px; padding:.75rem 1rem; border:2px solid var(--line); border-radius:14px; color:var(--ink); background:#fbfdfc; font:inherit; font-weight:800; }.agent-editor-form select:focus { outline:3px solid #1677ff33; border-color:var(--green); }
 .visually-hidden { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important; }
