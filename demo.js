@@ -1,25 +1,32 @@
 const works = [
   {
-    code: "PUBLIC DEMO 01 · 합성 작품",
-    title: "구름 위의 비밀 도서관",
-    summary: "공개 저장소용 AI 생성 합성 이미지로 페이지 탐색과 한글 OCR 검수 흐름을 시험하는 데모입니다.",
-    folder: "synthetic-cloud-library",
-    assetFolder: "cloud-library",
-    count: 7,
-    genre: "판타지·합성 데모",
-    notice: "실제 어린이 작품이 아닌 공개용 합성 샘플입니다. OCR 결과는 사람이 원본과 대조한 뒤에만 확정합니다.",
-    episodes: [[1,"하늘 도서관 이야기",1,4],[2,"황금 열쇠의 비밀",5,7]]
+    code: "DEMO 01 · 01_작품",
+    title: "스포츠 이야기 모음 (임시 제목)",
+    summary: "20장의 실제 원본으로 페이지 탐색과 여러 에피소드 분할을 보여주는 대표 데모입니다.",
+    folder: "01_작품",
+    assetFolder: "01",
+    count: 20,
+    firstFile: "001_20260930_201748.jpg",
+    timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
+    genre: "스포츠·만화(임시)",
+    notice: "페이지 순서 확인 완료. 작품명·에피소드 경계·공개용 작가명과 보호자 동의는 확정 전입니다.",
+    episodes: [
+      [1,"도입과 작품 안내",1,2], [2,"스포츠 이야기 1",3,5], [3,"스포츠 이야기 2",6,8],
+      [4,"스포츠 이야기 3",9,11], [5,"스포츠 이야기 4",12,15], [6,"마지막 이야기와 끝맺음",16,20]
+    ]
   },
   {
-    code: "PUBLIC DEMO 02 · 합성 작품",
-    title: "용감한 민들레",
-    summary: "공개 저장소용 AI 생성 합성 이미지로 카툰 전체화면과 안전 편집 제안을 확인하는 데모입니다.",
-    folder: "synthetic-brave-dandelion",
-    assetFolder: "brave-dandelion",
-    count: 7,
-    genre: "자연·합성 데모",
-    notice: "실제 어린이 작품이 아닌 공개용 합성 샘플입니다. 자동 제안은 원문을 바꾸지 않으며 사람 승인이 필요합니다.",
-    episodes: [[1,"바람을 만난 씨앗",1,4],[2,"새로운 들판",5,7]]
+    code: "DEMO 02 · 03_작품",
+    title: "게임 1·2·3 모음집 (임시 제목)",
+    summary: "12장의 실제 원본으로 3개 에피소드 목차와 콘텐츠 안내를 함께 보여주는 데모입니다.",
+    folder: "03_작품",
+    assetFolder: "03",
+    count: 12,
+    firstFile: "001_20260930_203620.jpg",
+    timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
+    genre: "게임·액션 만화(임시)",
+    notice: "무기·전투·유혈 표현이 포함될 수 있어 콘텐츠 안내와 권장 연령을 보호자가 검토해야 합니다.",
+    episodes: [[1,"게임 이야기 1",2,4],[2,"게임 이야기 2",5,8],[3,"게임 이야기 3",9,12]]
   }
 ];
 
@@ -40,11 +47,11 @@ const pageParams = new URLSearchParams(window.location.search);
 const readerOnlyMode = pageParams.get("mode") === "reader";
 
 function fileName(work, index) {
-  return `page-${String(index + 1).padStart(2,"0")}.jpg`;
+  return `${String(index + 1).padStart(3,"0")}_20260930_${work.timestamps[index]}.jpg`;
 }
 
 function imagePath(work, index) {
-  return `./assets/web/synthetic/${work.assetFolder}/${fileName(work,index)}`;
+  return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
 }
 
 function renderCards() {
@@ -296,7 +303,7 @@ function runPageAgent(event) {
   try {
     const output = window.BingoEditingAgent.run({
       type:"editing",
-      sourceScope:"synthetic-demo",
+      sourceScope:"actual-local-review",
       localOnly:true,
       humanConfirmed:true,
       bookId:selectedWork.folder,

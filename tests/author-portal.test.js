@@ -92,12 +92,15 @@ test("작품 상세의 표지를 누르면 전체화면 그림책 리더가 열�
   assert.match(css, /\.detail-cover-trigger \{[^}]*cursor:zoom-in/s);
 });
 
-test("사이트 자체 접근 제어를 사용하고 마이 탭에는 별도 운영자 로그인을 요구하지 않는다", () => {
+test("마이 탭은 운영자 비밀번호를 Supabase에서 검증한 뒤에만 열린다", () => {
   const html = read("index.html");
   const app = read("app.js");
-  assert.doesNotMatch(html, /id="loginDialog"|id="myLoginGate"|id="manageButton"/);
-  assert.doesNotMatch(html, /운영자 로그인/);
+  assert.match(html, /id="loginDialog"/);
+  assert.match(html, /id="loginPassword"[^>]*type="password"[^>]*pattern="\[0-9\]\{6\}"/);
   assert.match(html, /<div id="myDashboard">/);
-  assert.doesNotMatch(app, /signInWithPassword/);
-  assert.match(app, /공개 자료 모드/);
+  assert.match(app, /requestPrimaryTab/);
+  assert.match(app, /nextTab === "my" && !isOperatorSession\(\)/);
+  assert.match(app, /signInWithPassword\(\{ email:OPERATOR_EMAIL, password \}\)/);
+  assert.match(app, /dashboard\.hidden = !isOperatorSession\(\)/);
+  assert.doesNotMatch(`${html}\n${app}`, /111111/);
 });

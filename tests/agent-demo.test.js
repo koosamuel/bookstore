@@ -53,7 +53,7 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(html, /id="agentEditorForm"/);
   assert.match(html, /id="agentHumanConfirmed"/);
   assert.ok(html.indexOf("agent-demo.js") < html.indexOf("demo.js"));
-  assert.match(js, /sourceScope:"synthetic-demo"/);
+  assert.match(js, /sourceScope:"actual-local-review"/);
   assert.match(js, /localOnly:true/);
   assert.match(js, /data-agent-suggestion/);
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);

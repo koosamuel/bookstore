@@ -62,6 +62,7 @@ let engagementComments = {};
 let engagementSettings = {};
 let moderationComments = [];
 let activePrimaryTab = "home";
+let pendingPrimaryTab = null;
 let homeFeedGeneratedAt = null;
 let authorDashboard = null;
 let activeAuthorAlias = "";
@@ -74,12 +75,20 @@ function setSyncStatus(message, state = "") {
 }
 
 function updateAuthUi() {
-  if (!session) {
+  if (!isOperatorSession()) {
     authorDashboard = null;
     activeAuthorAlias = "";
     authorDashboardMode = "loading";
   }
   renderMyDashboard();
+}
+
+function openMyLogin() {
+  const dialog = $("#loginDialog");
+  $("#loginForm").reset();
+  $("#loginError").textContent = "";
+  if (!dialog.open) dialog.showModal();
+  window.setTimeout(() => $("#loginPassword").focus(), 0);
 }
 
 function setPrimaryTab(tab) {
@@ -97,6 +106,17 @@ function setPrimaryTab(tab) {
   }
   history.replaceState(null, "", activePrimaryTab === "my" ? "#my" : "#home");
   window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+function requestPrimaryTab(tab) {
+  const nextTab = tab === "my" ? "my" : "home";
+  if (nextTab === "my" && !isOperatorSession()) {
+    pendingPrimaryTab = "my";
+    openMyLogin();
+    return;
+  }
+  pendingPrimaryTab = null;
+  setPrimaryTab(nextTab);
 }
 
 function publicationLabel(status) {
@@ -146,7 +166,8 @@ async function refreshAuthorDashboard() {
 function renderMyDashboard() {
   const dashboard = $("#myDashboard");
   if (!dashboard) return;
-  dashboard.hidden = false;
+  dashboard.hidden = !isOperatorSession();
+  if (!isOperatorSession()) return;
   const select = $("#myAuthorSelect");
   const aliases = authorAliases();
   if (!activeAuthorAlias || !aliases.includes(activeAuthorAlias)) activeAuthorAlias = aliases[0] || "";
@@ -902,8 +923,44 @@ async function requestWorkflowChanges() {
 
 async function logout() {
   await db.auth.signOut();
-  $("#manageDialog").close();
+  if ($("#manageDialog").open) $("#manageDialog").close();
+  setPrimaryTab("home");
   showToast("로그아웃했습니다.");
+}
+
+async function login(event) {
+  event.preventDefault();
+  const button = $("#loginButton");
+  const errorElement = $("#loginError");
+  const password = $("#loginPassword").value;
+  errorElement.textContent = "";
+  if (!/^\d{6}$/.test(password)) {
+    errorElement.textContent = "숫자 6자리 비밀번호를 입력해 주세요.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "확인 중…";
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email:OPERATOR_EMAIL, password });
+    if (error || data.session?.user?.email !== OPERATOR_EMAIL) {
+      if (data.session) await db.auth.signOut();
+      errorElement.textContent = "관리자 비밀번호를 확인해 주세요.";
+      return;
+    }
+    session = data.session;
+    $("#loginPassword").value = "";
+    $("#loginDialog").close();
+    setPrimaryTab(pendingPrimaryTab || "my");
+    pendingPrimaryTab = null;
+    await refreshAuthorDashboard();
+    showToast("마이 작업 공간을 열었습니다.");
+  } catch (error) {
+    errorElement.textContent = "로그인 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    console.error(error);
+  } finally {
+    button.disabled = false;
+    button.textContent = "마이 열기";
+  }
 }
 
 function showToast(message) {
@@ -912,8 +969,9 @@ function showToast(message) {
 }
 
 $("#searchInput").addEventListener("input", (event) => { query = event.target.value.trim(); renderBooks(); });
-document.querySelectorAll("[data-primary-tab]").forEach((button) => button.addEventListener("click", () => setPrimaryTab(button.dataset.primaryTab)));
+document.querySelectorAll("[data-primary-tab]").forEach((button) => button.addEventListener("click", () => requestPrimaryTab(button.dataset.primaryTab)));
 $("#myAuthorSelect").addEventListener("change", async (event) => { activeAuthorAlias = event.target.value; authorDashboard = null; authorDashboardMode = "loading"; renderMyDashboard(); await refreshAuthorDashboard(); });
+$("#loginForm").addEventListener("submit", login);
 $("#addBookForm").addEventListener("submit", addBook);
 $("#editBookForm").addEventListener("submit", editBook);
 $("#publishingForm").addEventListener("submit", savePublishingMetadata);
@@ -925,7 +983,13 @@ document.querySelectorAll(".workflow-tab").forEach((button) => button.addEventLi
 $("#logoutButton").addEventListener("click", logout);
 $("#resetAllButton").addEventListener("click", async () => { if (!confirm("모든 책을 ‘대여 가능’으로 바꿀까요?")) return; const { error } = await db.from("books").update({ status:"available", borrowed_at:null, updated_at:new Date().toISOString() }).eq("status", "borrowed"); showToast(error ? "초기화에 실패했습니다." : "모든 대여 상태를 초기화했어요."); });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
-["bookDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
+["bookDialog","loginDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
+$("#loginDialog").addEventListener("close", () => {
+  if (!isOperatorSession() && pendingPrimaryTab === "my") {
+    pendingPrimaryTab = null;
+    setPrimaryTab("home");
+  }
+});
 
 $("#fullscreenButton").addEventListener("click", async () => {
   try {
@@ -953,7 +1017,14 @@ function startHeroBanner() {
   }, 4500);
 }
 
-db.auth.onAuthStateChange(async (_event, nextSession) => { session = nextSession; updateAuthUi(); await loadEngagement(); if (session) await refreshAuthorDashboard(); renderBooks(); });
+db.auth.onAuthStateChange(async (_event, nextSession) => {
+  session = nextSession;
+  updateAuthUi();
+  if (!isOperatorSession() && activePrimaryTab === "my") setPrimaryTab("home");
+  await loadEngagement();
+  if (isOperatorSession()) await refreshAuthorDashboard();
+  renderBooks();
+});
 db.channel("books-status").on("postgres_changes", { event:"*", schema:"public", table:"books" }, async () => { await loadBooks(); if ($("#manageDialog").open) renderManagement(); }).subscribe((status) => { if (status === "SUBSCRIBED") setSyncStatus("실시간 연결", "online"); });
 db.channel("book-engagement")
   .on("postgres_changes", { event:"*", schema:"public", table:"book_comments" }, async () => { await loadEngagement(); if (session) await refreshAuthorDashboard(); renderBooks(); if ($("#manageDialog").open) loadModerationComments(); })
@@ -961,6 +1032,13 @@ db.channel("book-engagement")
   .subscribe();
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
 
-startHeroBanner();
-setPrimaryTab(location.hash === "#my" ? "my" : "home");
-loadBooks();
+async function initializeApp() {
+  const { data } = await db.auth.getSession();
+  session = data.session;
+  updateAuthUi();
+  startHeroBanner();
+  requestPrimaryTab(location.hash === "#my" ? "my" : "home");
+  await loadBooks();
+}
+
+initializeApp();

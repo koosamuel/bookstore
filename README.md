@@ -4,19 +4,19 @@
 
 ## 기준 소스와 배포
 
-- 공동 작업용 공개 저장소: `https://github.com/koosamuel/bookstore`
-- 현재 GitHub Pages 배포: `https://koosamuel.github.io/bookstore/`
-- 공개 저장소와 Pages에는 합성 샘플만 포함한다. 실제 어린이 작품 원본과 비공개 검토 자료는 올리지 않는다.
-- 소유자 전용 OpenAI Sites 작업본의 기능을 공개 안전 범위로 변환해 동기화한다.
+- 현재 정본 소스: 이 폴더의 OpenAI Sites 연결 저장소 (`.openai/hosting.json`의 프로젝트 ID 기준)
+- 현재 Sites 배포: `https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site`
+- 현재 공개 범위: 소유자 전용. 배포 과정에서 공개 범위를 임의로 변경하지 않는다.
+- 기존 GitHub Pages 저장소·주소는 학교 현장용 이전 배포본으로 구분하며, 정본과 재동기화하기 전에는 같은 버전으로 간주하지 않는다.
 
 ## 운영 구조
 
 ```text
-GitHub Pages 정적 클라이언트 → Supabase RPC API·RLS·Realtime
+OpenAI Sites 정적 클라이언트 → Supabase RPC API·RLS·Realtime
                               └─ 도서·어린이 작가 별칭·독서 반응·운영자 인증
 ```
 
-- 별도의 직접 운영 서버 없이 GitHub Pages와 Supabase를 사용합니다.
+- 별도의 직접 운영 서버 없이 OpenAI Sites와 Supabase를 사용합니다.
 - 도서와 대여 상태는 Supabase에 저장되어 여러 기기에서 공유됩니다.
 - 일반 방문자는 목록을 읽을 수 있고, 로그인한 운영자만 대여·반납 상태를 바꿀 수 있습니다.
 - 변경 사항은 Supabase Realtime으로 연결된 화면에 반영됩니다.
@@ -93,8 +93,7 @@ supabase/author-portal.sql
 source practice/.venv/bin/activate
 which python
 python --version
-git clone https://github.com/koosamuel/bookstore.git
-cd bookstore
+cd project/mj_bookstore
 python -m http.server 8000
 ```
 
@@ -126,11 +125,15 @@ python -m http.server 8000
 
 ## 배포
 
+현재 정본은 OpenAI Sites 프로젝트다. `scripts/build-static.sh`로 `dist/`를 만든 뒤 Sites 소스 버전으로 저장·배포한다. `.openai/hosting.json`의 `project_id`와 기존 접근 정책을 유지한다.
+
+### 기존 GitHub Pages 배포본
+
 저장소의 **Settings → Pages → Build and deployment**에서 Source를 `Deploy from a branch`, Branch를 `main / (root)`로 지정합니다.
 
-배포 주소: `https://koosamuel.github.io/bookstore/`
+이전 배포 주소: `https://koodanielmj.github.io/project_mj/`
 
-`scripts/build-static.sh`는 배포 파일을 `dist/`에 묶어 로컬 검증할 때 사용한다. GitHub Pages는 `main / (root)`의 정적 파일을 서비스한다.
+이 주소는 Sites 정본과 자동으로 동기화되지 않는다. 공동 작업용 GitHub 저장소를 다시 기준으로 삼을 경우, 두 배포본의 commit과 기능을 먼저 대조한다.
 
 ## 검증
 
@@ -142,7 +145,7 @@ node --test tests/*.test.js
 sh scripts/build-static.sh
 ```
 
-자동 테스트는 합성 원문 보존, 실제 자료 차단, 개인정보 후보 차단, 출력 검증 실패, 홈·마이 탭, 작가 별칭 범위, 서버 API 계약, 로컬 대체 저장, 배포 파일 포함 여부와 독서 반응 집계 연결을 확인한다.
+자동 테스트 17개는 합성 원문 보존, 실제 자료 차단, 개인정보 후보 차단, 출력 검증 실패, 홈·마이 탭, 작가 별칭 범위, 서버 API 계약, 로컬 대체 저장, 배포 파일 포함 여부와 독서 반응 집계 연결을 확인한다.
 
 `ai_suggestions` 테이블이 아직 없는 환경에서도 합성 데모 Agent는 브라우저 메모리에 결과를 임시 저장해 생성·채택·거절 흐름을 확인할 수 있다. 임시 결과는 새로고침하면 사라지며 실제 어린이 자료에는 사용할 수 없다. 영구 저장은 `supabase/child-publishing.sql` 적용 후 활성화된다.
 
