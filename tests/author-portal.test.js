@@ -13,7 +13,7 @@ test("홈·마이 탭과 작가 별칭 선택 UI를 제공한다", () => {
   assert.match(html, /data-primary-tab="my"/);
   assert.match(html, /id="myAuthorSelect"/);
   assert.match(html, /실명·학년·반 없이/);
-  assert.match(html, /tab=materials&amp;v=24"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
+  assert.match(html, /tab=materials&amp;v=25"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
 });
 
 test("전체 화면은 모바일 우선 레이아웃과 하단 탭을 기본으로 사용한다", () => {
@@ -98,6 +98,7 @@ test("홈 작품은 회차 목록을 거쳐 전체화면으로 읽고, 편집 �
   assert.match(demoCss, /body\.episode-index/);
   assert.match(demo, /selectedWork\.count/);
   assert.match(demoCss, /body\.reader-only/);
+  assert.match(demoCss, /body\.reader-only \.page-viewer img \{[^}]*position:absolute;[^}]*width:100%;[^}]*height:100%;[^}]*object-fit:contain/s);
   assert.match(demoCss, /\.continuous-reader \{ gap:0/);
 });
 
