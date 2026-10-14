@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" role="img" aria-labelledby="title description">
+  <title id="title">공개 시연용 안전 화면</title>
+  <desc id="description">원본 어린이 작품 이미지는 제외했으며 폭력적 문장과 개인정보 후보 발견 시 공개를 차단한다는 안내</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#e2f5ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1200" rx="56" fill="url(#background)"/>
+  <circle cx="800" cy="235" r="100" fill="#0b8069"/>
+  <path d="M800 169l60 24v50c0 54-38 91-60 102-22-11-60-48-60-102v-50l60-24z" fill="none" stroke="#fff" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M766 245l23 23 49-55" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="800" y="415" text-anchor="middle" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="72" font-weight="800" fill="#123d35">공개 시연용 안전 화면</text>
+  <text x="800" y="505" text-anchor="middle" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="38" font-weight="600" fill="#526b65">원본 어린이 작품 이미지는 공개본에서 제외했습니다.</text>
+  <rect x="205" y="610" width="1190" height="150" rx="30" fill="#fff" stroke="#d7e9e3" stroke-width="5"/>
+  <text x="270" y="678" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="42" font-weight="800" fill="#b44732">폭력적 문장 후보</text>
+  <text x="270" y="728" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="34" font-weight="600" fill="#304d47">보호자·운영자 확인 전에는 공개하지 않습니다.</text>
+  <rect x="205" y="800" width="1190" height="150" rx="30" fill="#fff" stroke="#d7e9e3" stroke-width="5"/>
+  <text x="270" y="868" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="42" font-weight="800" fill="#b44732">개인정보 후보</text>
+  <text x="270" y="918" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="34" font-weight="600" fill="#304d47">실명·학교·연락처를 삭제한 뒤 다시 검토합니다.</text>
+  <text x="800" y="1080" text-anchor="middle" font-family="Pretendard, Apple SD Gothic Neo, sans-serif" font-size="30" font-weight="600" fill="#61756f">실제 이미지 대신 합성 안내 화면으로 기능만 시연합니다.</text>
+</svg>

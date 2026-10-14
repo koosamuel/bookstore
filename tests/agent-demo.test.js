@@ -148,7 +148,8 @@ test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 
   assert.match(js, /function analyzeTextSafety/);
   assert.match(js, /그림 속 장면은 자동 판정하지 않았습니다/);
   assert.match(html, /id="webPresentation"/);
-  assert.equal((html.match(/data-web-slide/g) || []).length, 10);
+  assert.equal((html.match(/data-web-slide/g) || []).length, 7);
+  assert.match(html, /API는 제안하고, 최종 판단은 사람이 합니다/);
   assert.match(html, /33 \/ 33/);
   assert.match(html, /한계와 다음 단계/);
   assert.doesNotMatch(html, /class="kiosk-presentation-card"/);

@@ -3,6 +3,7 @@ const works = [
     title: "스포츠 이야기 모음",
     folder: "01_작품",
     assetFolder: "01",
+    publicDemoOnly: true,
     count: 20,
     firstFile: "001_20260930_201748.jpg",
     timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
@@ -16,6 +17,7 @@ const works = [
     title: "게임 1·2·3 모음집",
     folder: "03_작품",
     assetFolder: "03",
+    publicDemoOnly: true,
     count: 12,
     firstFile: "001_20260930_203620.jpg",
     timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
@@ -75,6 +77,7 @@ function fileName(work, index) {
 
 function imagePath(work, index) {
   if (index >= work.timestamps.length) return work.importedPages?.[index - work.timestamps.length]?.url || "";
+  if (work.publicDemoOnly) return "./assets/web/synthetic/public-safety-placeholder.svg";
   return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
 }
 
