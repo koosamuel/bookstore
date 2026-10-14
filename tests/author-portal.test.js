@@ -74,16 +74,23 @@ test("마이 서버 API는 운영자 인증을 요구하고 공개 API는 개인
   assert.doesNotMatch(sql, /grade|class|birth|phone|email[^')]/i);
 });
 
-test("홈 작품은 카툰 전체화면으로, 편집 화면은 마이 작업실로 분리한다", () => {
+test("홈 작품은 회차 목록을 거쳐 전체화면으로 읽고, 편집 화면은 마이 작업실로 분리한다", () => {
+  const demoHtml = read("demo.html");
   const html = read("index.html");
   const demo = read("demo.js");
   const demoCss = read("demo.css");
   assert.match(html, /demo\.html\?work=0&amp;mode=reader&amp;from=home/);
-  assert.match(html, /카툰 전체화면 보기/);
+  assert.match(html, /회차별로 읽기/);
   assert.match(html, /id="myEditorTitle">작품 편집/);
   assert.match(html, /demo\.html\?work=0&amp;mode=edit&amp;from=my/);
   assert.ok(html.indexOf('id="myEditorTitle"') > html.indexOf('id="myDashboard"'));
   assert.match(demo, /readerOnlyMode/);
+  assert.match(demoHtml, /id="publicEpisodeBrowser"/);
+  assert.match(demoHtml, /id="publicEpisodeList"/);
+  assert.match(demo, /function renderPublicEpisodeBrowser/);
+  assert.match(demo, /function openPublicEpisode/);
+  assert.match(demo, /episodeScopedReader/);
+  assert.match(demoCss, /body\.episode-index/);
   assert.match(demo, /selectedWork\.count/);
   assert.match(demoCss, /body\.reader-only/);
   assert.match(demoCss, /\.continuous-reader \{ gap:0/);

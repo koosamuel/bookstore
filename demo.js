@@ -37,6 +37,7 @@ let editorSession = null;
 let selectedCoverPage = 1;
 let editorSchemaReady = false;
 let episodeFullscreenMode = false;
+let publicEpisodeActive = false;
 let currentPageCrop = { x:0, y:0, width:100, height:100 };
 let autoTurnEnabled = false;
 let autoTurnTimer = null;
@@ -389,6 +390,47 @@ function renderCards() {
   document.querySelectorAll("[data-open-work]").forEach((button) => button.addEventListener("click", () => openWork(Number(button.dataset.openWork))));
 }
 
+function renderPublicEpisodeBrowser() {
+  if (!selectedWork) return;
+  $("#publicEpisodeCount").textContent = `총 ${selectedWork.episodes.length}화`;
+  $("#publicEpisodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end],index) => `<button class="public-episode-card" type="button" data-public-episode="${index}" aria-label="${number}화 ${escapeHtml(title)} 읽기">
+    <img src="${imagePath(selectedWork,start-1)}" alt="" loading="lazy" />
+    <span class="public-episode-card-copy"><strong>${number}화 · ${escapeHtml(title)}</strong><small>${start}~${end}쪽 · ${end-start+1}장</small></span>
+    <span class="public-episode-card-open">읽기</span>
+  </button>`).join("");
+  document.querySelectorAll("[data-public-episode]").forEach((button) => button.addEventListener("click",() => openPublicEpisode(Number(button.dataset.publicEpisode))));
+}
+
+function showPublicEpisodeIndex({ exitBrowserFullscreen = true } = {}) {
+  if (!readerOnlyMode || !selectedWork) return;
+  stopAutoTurn();
+  publicEpisodeActive = false;
+  document.body.classList.remove("reader-only");
+  document.body.classList.add("episode-index");
+  document.title = `${selectedWork.title} · 회차 목록`;
+  $("#closeWorkspace").textContent = "서점으로";
+  $("#publicEpisodeBrowser").hidden = false;
+  document.querySelectorAll("[data-panel]").forEach((panel) => { panel.hidden = true; panel.classList.remove("active"); });
+  if (exitBrowserFullscreen && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  $("#workspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function openPublicEpisode(index) {
+  if (!readerOnlyMode || !selectedWork || !selectedWork.episodes[index]) return;
+  publicEpisodeActive = true;
+  selectedEpisode = index;
+  selectedPage = selectedWork.episodes[index][2]-1;
+  document.body.classList.remove("episode-index");
+  document.body.classList.add("reader-only");
+  $("#publicEpisodeBrowser").hidden = true;
+  $("#closeWorkspace").textContent = "회차 목록";
+  document.title = `${selectedWork.title} · ${selectedWork.episodes[index][0]}화`;
+  showTab("pages");
+  setReaderMode("continuous");
+  const fullscreenRequest = $("#workspace").requestFullscreen?.();
+  fullscreenRequest?.catch(() => {});
+}
+
 function enterEpisodeFullscreen() {
   episodeFullscreenMode = true;
   document.body.classList.add("reader-only");
@@ -460,11 +502,8 @@ function openWork(index) {
   renderReviewCard();
   renderThumbnails();
   if (readerOnlyMode) {
-    document.body.classList.add("reader-only");
-    document.title = `${selectedWork.title} · 카툰 전체화면`;
-    $("#closeWorkspace").textContent = "서점으로";
-    showTab("pages");
-    setReaderMode("single");
+    renderPublicEpisodeBrowser();
+    showPublicEpisodeIndex({ exitBrowserFullscreen:false });
   } else {
     renderContinuousReader();
     setReaderMode("single"); setZoom(1); showPage(selectedPage); showTab("pages");
@@ -825,17 +864,18 @@ function applyContinuousCrop(image) {
 function renderContinuousReader() {
   const episode = selectedWork.episodes[selectedEpisode];
   const [number, episodeTitle, episodeStart, episodeEnd] = episode;
-  const title = readerOnlyMode ? selectedWork.title : episodeTitle;
-  const start = readerOnlyMode ? 1 : episodeStart;
-  const end = readerOnlyMode ? selectedWork.count : episodeEnd;
-  const savedValue = readerOnlyMode ? localStorage.getItem(progressKey(selectedWork)) : localStorage.getItem(episodeProgressKey(selectedWork,number));
-  const savedPage = readerOnlyMode ? Number(savedValue || 0) : Number(savedValue || start) - 1;
+  const episodeScopedReader = !readerOnlyMode || publicEpisodeActive;
+  const title = episodeScopedReader ? episodeTitle : selectedWork.title;
+  const start = episodeScopedReader ? episodeStart : 1;
+  const end = episodeScopedReader ? episodeEnd : selectedWork.count;
+  const savedValue = episodeScopedReader ? localStorage.getItem(episodeProgressKey(selectedWork,number)) : localStorage.getItem(progressKey(selectedWork));
+  const savedPage = episodeScopedReader ? Number(savedValue || start) - 1 : Number(savedValue || 0);
   selectedPage = Math.min(Math.max(savedPage,start-1),end-1);
-  $("#episodeReaderTitle").textContent = readerOnlyMode ? title : `${number}화 · ${title}`;
-  const initialPosition = selectedPage - start + 2;
+  $("#episodeReaderTitle").textContent = episodeScopedReader ? `${number}화 · ${title}` : title;
+  const initialPosition = selectedPage - start + 1;
   const initialTotal = end - start + 1;
   const initialProgress = Math.round((initialPosition / initialTotal) * 100);
-  $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${initialPosition}/${initialTotal}쪽` : `${number}화 · 컷 ${initialPosition}/${initialTotal} · 원본 ${selectedPage+1}쪽`;
+  $("#readerLocation").textContent = episodeScopedReader ? `${number}화 · ${initialPosition}/${initialTotal}쪽` : `전체 작품 · ${initialPosition}/${initialTotal}쪽`;
   $("#episodeProgress").textContent = `${initialProgress}%`;
   $("#episodeProgressBar").style.width = `${initialProgress}%`;
   $("#previousEpisode").disabled = selectedEpisode === 0;
@@ -853,14 +893,14 @@ function renderContinuousReader() {
     const visible = entries.filter((entry) => entry.isIntersecting).sort((a,b) => b.intersectionRatio-a.intersectionRatio)[0];
     if (!visible) return;
     selectedPage = Number(visible.target.id.replace("continuous-page-",""))-1;
-    const position = selectedPage - start + 2;
+    const position = selectedPage - start + 1;
     const total = end - start + 1;
     const progress = Math.round((position / total) * 100);
-    $("#readerLocation").textContent = readerOnlyMode ? `전체 작품 · ${position}/${total}쪽` : `${number}화 · 컷 ${position}/${total} · 원본 ${selectedPage+1}쪽`;
+    $("#readerLocation").textContent = episodeScopedReader ? `${number}화 · ${position}/${total}쪽` : `전체 작품 · ${position}/${total}쪽`;
     $("#episodeProgress").textContent = `${progress}%`;
     $("#episodeProgressBar").style.width = `${progress}%`;
     localStorage.setItem(progressKey(selectedWork),String(selectedPage));
-    if (!readerOnlyMode) localStorage.setItem(episodeProgressKey(selectedWork,number),String(selectedPage+1));
+    if (episodeScopedReader) localStorage.setItem(episodeProgressKey(selectedWork,number),String(selectedPage+1));
   },{threshold:[.35,.6]});
   $("#continuousReader").querySelectorAll(".continuous-page").forEach((page) => continuousObserver.observe(page));
 }
@@ -1134,7 +1174,7 @@ $("#singleModeButton").addEventListener("click",() => setReaderMode("single"));
 $("#continuousModeButton").addEventListener("click",() => setReaderMode("continuous"));
 $("#previousEpisode").addEventListener("click",() => changeEpisode(-1));
 $("#nextEpisode").addEventListener("click",() => changeEpisode(1));
-$("#episodeListButton").addEventListener("click",() => { showTab("pages"); setReaderMode("single"); showPage(selectedPage); });
+$("#episodeListButton").addEventListener("click",() => { if (readerOnlyMode) showPublicEpisodeIndex(); else { showTab("pages"); setReaderMode("single"); showPage(selectedPage); } });
 $("#zoomOutButton").addEventListener("click",() => setZoom(zoom-.25));
 $("#zoomInButton").addEventListener("click",() => setZoom(zoom+.25));
 $("#fitButton").addEventListener("click",() => setZoom(1));
@@ -1211,6 +1251,7 @@ document.addEventListener("keydown",(event) => {
 $("#closeWorkspace").addEventListener("click",() => {
   stopAutoTurn();
   if (episodeFullscreenMode) { leaveEpisodeFullscreen(); return; }
+  if (readerOnlyMode && publicEpisodeActive) { showPublicEpisodeIndex(); return; }
   if (readerOnlyMode) { window.location.href = "./index.html#home"; return; }
   $("#workspace").hidden = true; $("#demoGrid").hidden = false; window.scrollTo({top:0,behavior:"smooth"});
 });

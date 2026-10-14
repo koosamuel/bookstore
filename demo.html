@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=21" />
+    <link rel="stylesheet" href="./demo.css?v=22" />
   </head>
   <body>
     <header class="demo-header">
@@ -21,6 +21,14 @@
           <h2 id="workTitle"></h2>
           <button id="closeWorkspace" type="button">다른 작품</button>
         </div>
+
+        <section class="public-episode-browser" id="publicEpisodeBrowser" aria-labelledby="publicEpisodeHeading" hidden>
+          <header class="public-episode-heading">
+            <div><p class="eyebrow">EPISODES</p><h3 id="publicEpisodeHeading">회차 선택</h3></div>
+            <strong id="publicEpisodeCount"></strong>
+          </header>
+          <div class="public-episode-list" id="publicEpisodeList"></div>
+        </section>
 
         <nav class="tabs" aria-label="편집 메뉴">
           <button class="active" type="button" data-tab="pages">읽기·편집</button>
@@ -261,6 +269,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=21"></script>
+    <script src="./demo.js?v=22"></script>
   </body>
 </html>

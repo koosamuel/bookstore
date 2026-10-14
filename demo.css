@@ -23,6 +23,18 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .workspace-head { display:flex; justify-content:space-between; gap:1rem; align-items:start; }
 .workspace-head h2 { margin:.3rem 0; font-size:2rem; }
 .workspace-head p { color:#60736e; }
+.public-episode-browser { display:grid; gap:1rem; margin-top:1.5rem; }
+.public-episode-heading { display:flex; align-items:end; justify-content:space-between; gap:1rem; padding:1rem 1.1rem; border-radius:18px; background:var(--mint); }
+.public-episode-heading h3 { margin:.25rem 0 0; font-size:1.45rem; }
+.public-episode-heading>strong { color:#536d66; }
+.public-episode-list { display:grid; gap:.75rem; }
+.public-episode-card { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:1rem; align-items:center; width:100%; min-height:116px; padding:.75rem; border:1px solid var(--line); border-radius:18px; color:var(--ink); background:#fbfdfc; text-align:left; cursor:pointer; }
+.public-episode-card:hover { border-color:#8fbbae; background:#f4fbf8; }
+.public-episode-card img { width:132px; aspect-ratio:4/3; object-fit:cover; object-position:center top; border-radius:12px; background:#eef3f1; }
+.public-episode-card-copy { display:grid; gap:.4rem; min-width:0; }
+.public-episode-card-copy strong { font-size:1.08rem; }
+.public-episode-card-copy small { color:#6b7d78; }
+.public-episode-card-open { padding:.5rem .75rem; border-radius:999px; color:var(--green); background:var(--mint); font-size:.8rem; font-weight:900; }
 .tabs { display:flex; gap:.5rem; margin:1.5rem 0; padding:.4rem; border-radius:16px; background:#f0f5f3; }
 .tabs button { flex:1; padding:.75rem; border:0; border-radius:12px; background:transparent; color:#60736e; font-weight:800; cursor:pointer; }
 .tabs button.active { background:white; color:var(--green); box-shadow:0 5px 16px #16483a12; }
@@ -189,8 +201,11 @@ main { width:min(1480px,96vw); margin:1.25rem auto 5rem; }
 .kiosk-presentation-card>p { margin:0; color:#536d66; line-height:1.6; }.kiosk-project-link code { font:inherit; font-weight:900; }
 body.high-contrast { --ink:#000; --green:#00523f; --mint:#e5fff6; --line:#5f6c68; --warn:#fff0a8; background:#fff; }
 body.high-contrast .workspace,body.high-contrast .demo-card { border-width:2px; box-shadow:none; }
+body.episode-index .demo-header,body.episode-index .demo-grid,body.episode-index .tabs,body.episode-index [data-panel] { display:none!important; }
+body.episode-index main { width:min(920px,94vw); margin:1rem auto 3rem; }
+body.episode-index .workspace { margin:0; }
 body.reader-only { min-height:100dvh; color:#f7fbf9; background:#101513; }
-body.reader-only .demo-header,body.reader-only .demo-grid,body.reader-only .tabs,body.reader-only .image-navigator,body.reader-only .segmented,body.reader-only .thumbnail-strip,body.reader-only .episode-navigation,body.reader-only .ocr-actions,body.reader-only .ocr-progress,body.reader-only .ocr-draft-panel,body.reader-only .agent-editor { display:none!important; }
+body.reader-only .demo-header,body.reader-only .demo-grid,body.reader-only .tabs,body.reader-only .public-episode-browser,body.reader-only .image-navigator,body.reader-only .segmented,body.reader-only .thumbnail-strip,body.reader-only .episode-navigation,body.reader-only .ocr-actions,body.reader-only .ocr-progress,body.reader-only .ocr-draft-panel,body.reader-only .agent-editor { display:none!important; }
 body.reader-only main { width:100%; margin:0; }
 body.reader-only .workspace { min-height:100dvh; margin:0; padding:0; border:0; border-radius:0; background:#101513; box-shadow:none; }
 body.reader-only .workspace-head { position:sticky; top:0; z-index:20; align-items:center; padding:calc(10px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left)); background:#101513ef; border-bottom:1px solid #ffffff24; backdrop-filter:blur(12px); }
@@ -233,6 +248,13 @@ body.reader-only .continuous-page figcaption { margin:0; padding:7px 10px; color
   main { width:min(100% - 20px,1180px); margin:1rem auto 3rem; }
   .demo-grid { gap:.8rem; }
   .demo-card { border-radius:18px; }
+  .public-episode-browser { gap:.65rem; margin-top:1rem; }
+  .public-episode-heading { align-items:flex-start; padding:.8rem; border-radius:13px; }
+  .public-episode-heading h3 { font-size:1.15rem; }
+  .public-episode-card { grid-template-columns:88px minmax(0,1fr) auto; gap:.65rem; min-height:88px; padding:.55rem; border-radius:13px; }
+  .public-episode-card img { width:88px; border-radius:9px; }
+  .public-episode-card-copy strong { font-size:.9rem; }
+  .public-episode-card-copy small,.public-episode-card-open { font-size:.7rem; }
   .demo-card-body { padding:1rem; }
   .demo-card h2 { font-size:1.22rem; }
   .demo-card p { font-size:.84rem; line-height:1.5; }

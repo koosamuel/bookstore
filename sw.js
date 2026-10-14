@@ -1,4 +1,4 @@
-const CACHE="bookstore-seoul-v49";
+const CACHE="bookstore-seoul-v50";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./agent-demo.js","./server-api.js","./demo.html","./demo.css","./demo.js","./books.json","./manifest.webmanifest","./assets/web/synthetic/brave-dandelion/cover.jpg","./assets/web/synthetic/brave-dandelion/page-01.jpg","./assets/web/synthetic/brave-dandelion/page-02.jpg","./assets/web/synthetic/brave-dandelion/page-03.jpg","./assets/web/synthetic/brave-dandelion/page-04.jpg","./assets/web/synthetic/brave-dandelion/page-05.jpg","./assets/web/synthetic/brave-dandelion/page-06.jpg","./assets/web/synthetic/brave-dandelion/page-07.jpg"];
 self.addEventListener("install",(event)=>event.waitUntil(caches.open(CACHE).then((cache)=>cache.addAll(ASSETS))));
 self.addEventListener("activate",(event)=>event.waitUntil(caches.keys().then((keys)=>Promise.all(keys.filter((key)=>key!==CACHE).map((key)=>caches.delete(key))))));
