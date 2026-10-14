@@ -98,11 +98,11 @@ on public.book_comments for select to anon, authenticated using (
 );
 create policy "operators read all comments"
 on public.book_comments for select to authenticated
-using ((auth.jwt() ->> 'email') = 'operator@bingo.local');
+using (auth.uid() = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid);
 create policy "operators moderate comments"
 on public.book_comments for update to authenticated
-using ((auth.jwt() ->> 'email') = 'operator@bingo.local')
-with check ((auth.jwt() ->> 'email') = 'operator@bingo.local');
+using (auth.uid() = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid)
+with check (auth.uid() = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid);
 
 drop policy if exists "public reads engagement settings" on public.book_engagement_settings;
 drop policy if exists "operators manage engagement settings" on public.book_engagement_settings;
@@ -115,8 +115,8 @@ on public.book_engagement_settings for select to anon, authenticated using (
 );
 create policy "operators manage engagement settings"
 on public.book_engagement_settings for all to authenticated
-using ((auth.jwt() ->> 'email') = 'operator@bingo.local')
-with check ((auth.jwt() ->> 'email') = 'operator@bingo.local');
+using (auth.uid() = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid)
+with check (auth.uid() = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid);
 
 grant select on public.book_metrics_daily, public.book_engagement_settings to anon, authenticated;
 grant select on public.book_comments to anon, authenticated;

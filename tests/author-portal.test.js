@@ -62,7 +62,7 @@ test("마이 서버 API는 운영자 인증을 요구하고 공개 API는 개인
   const sql = read("supabase/author-portal.sql");
   assert.match(sql, /get_public_home_feed/);
   assert.match(sql, /get_author_dashboard/);
-  assert.match(sql, /auth\.jwt\(\) ->> 'email'/);
+  assert.match(sql, /auth\.uid\(\) is distinct from '[0-9a-f-]+'::uuid/);
   assert.match(sql, /operator authentication required/);
   assert.doesNotMatch(sql, /grade|class|birth|phone|email[^')]/i);
 });
@@ -92,15 +92,20 @@ test("작품 상세의 표지를 누르면 전체화면 그림책 리더가 열�
   assert.match(css, /\.detail-cover-trigger \{[^}]*cursor:zoom-in/s);
 });
 
-test("마이 탭은 운영자 비밀번호를 Supabase에서 검증한 뒤에만 열린다", () => {
+test("마이 탭은 운영자 이메일과 비밀번호를 Supabase에서 검증한 뒤에만 열린다", () => {
   const html = read("index.html");
   const app = read("app.js");
   assert.match(html, /id="loginDialog"/);
+  assert.match(html, /id="loginEmail"[^>]*type="email"/);
   assert.match(html, /id="loginPassword"[^>]*type="password"[^>]*pattern="\[0-9\]\{6\}"/);
+  assert.match(html, /class="text-button my-manage-button" id="logoutButton"/);
   assert.match(html, /<div id="myDashboard">/);
   assert.match(app, /requestPrimaryTab/);
   assert.match(app, /nextTab === "my" && !isOperatorSession\(\)/);
-  assert.match(app, /signInWithPassword\(\{ email:OPERATOR_EMAIL, password \}\)/);
+  assert.match(app, /const OPERATOR_USER_ID = "[0-9a-f-]+"/);
+  assert.match(app, /signInWithPassword\(\{ email, password \}\)/);
+  assert.match(app, /data\.session\?\.user\?\.id !== OPERATOR_USER_ID/);
   assert.match(app, /dashboard\.hidden = !isOperatorSession\(\)/);
-  assert.doesNotMatch(`${html}\n${app}`, /111111/);
+  assert.doesNotMatch(`${html}\n${app}`, /@gmail\.com/);
+  assert.doesNotMatch(app, /password\s*===/);
 });

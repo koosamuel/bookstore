@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_aQpJ9mF2fngaiZHFG89fzw_4ZoiCBPw";
-const OPERATOR_EMAIL = "operator@bingo.local";
+const OPERATOR_USER_ID = "f0d2a994-5837-4bbb-9f27-818f079d4c65";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const serverApi = window.BingoServerApi.create(db);
 
@@ -88,7 +88,7 @@ function openMyLogin() {
   $("#loginForm").reset();
   $("#loginError").textContent = "";
   if (!dialog.open) dialog.showModal();
-  window.setTimeout(() => $("#loginPassword").focus(), 0);
+  window.setTimeout(() => $("#loginEmail").focus(), 0);
 }
 
 function setPrimaryTab(tab) {
@@ -188,7 +188,7 @@ function renderMyDashboard() {
 }
 
 function isOperatorSession() {
-  return session?.user?.email === OPERATOR_EMAIL;
+  return session?.user?.id === OPERATOR_USER_ID;
 }
 
 async function loadBooks() {
@@ -932,6 +932,7 @@ async function login(event) {
   event.preventDefault();
   const button = $("#loginButton");
   const errorElement = $("#loginError");
+  const email = $("#loginEmail").value.trim();
   const password = $("#loginPassword").value;
   errorElement.textContent = "";
   if (!/^\d{6}$/.test(password)) {
@@ -941,14 +942,14 @@ async function login(event) {
   button.disabled = true;
   button.textContent = "확인 중…";
   try {
-    const { data, error } = await db.auth.signInWithPassword({ email:OPERATOR_EMAIL, password });
-    if (error || data.session?.user?.email !== OPERATOR_EMAIL) {
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error || data.session?.user?.id !== OPERATOR_USER_ID) {
       if (data.session) await db.auth.signOut();
-      errorElement.textContent = "관리자 비밀번호를 확인해 주세요.";
+      errorElement.textContent = "관리자 이메일 또는 비밀번호를 확인해 주세요.";
       return;
     }
     session = data.session;
-    $("#loginPassword").value = "";
+    $("#loginForm").reset();
     $("#loginDialog").close();
     setPrimaryTab(pendingPrimaryTab || "my");
     pendingPrimaryTab = null;
@@ -985,6 +986,8 @@ $("#resetAllButton").addEventListener("click", async () => { if (!confirm("모�
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
 ["bookDialog","loginDialog","manageDialog","editBookDialog","workflowDialog"].forEach((id) => document.getElementById(id).addEventListener("click", (event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }));
 $("#loginDialog").addEventListener("close", () => {
+  $("#loginForm").reset();
+  $("#loginError").textContent = "";
   if (!isOperatorSession() && pendingPrimaryTab === "my") {
     pendingPrimaryTab = null;
     setPrimaryTab("home");

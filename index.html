@@ -103,6 +103,7 @@
       <section class="my-panel" id="myPanel" role="tabpanel" aria-labelledby="myTab" hidden>
         <div class="my-heading">
           <div><p class="eyebrow">MY BOOKSHELF · 안전한 작품 관리</p><h2>마이</h2><p>작품은 보호자·운영자 검토를 통과하기 전까지 공개되지 않습니다.</p></div>
+          <button class="text-button my-manage-button" id="logoutButton" type="button">운영자 로그아웃</button>
         </div>
         <div id="myDashboard">
           <div class="my-author-picker">
@@ -142,7 +143,10 @@
           <div><p class="eyebrow">MY BOOKSHELF</p><h2 id="loginTitle">마이 로그인</h2></div>
           <button class="icon-button" type="button" data-close="loginDialog" aria-label="로그인 취소">×</button>
         </div>
-        <p class="dialog-description">어린이 작가의 비공개 작업 공간입니다. 관리자 비밀번호를 입력해 주세요.</p>
+        <p class="dialog-description">어린이 작가의 비공개 작업 공간입니다. 관리자 이메일과 비밀번호를 입력해 주세요.</p>
+        <label class="field">관리자 이메일
+          <input id="loginEmail" type="email" inputmode="email" autocomplete="username" required />
+        </label>
         <label class="field">관리자 비밀번호
           <input id="loginPassword" type="password" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="current-password" required />
         </label>
@@ -177,7 +181,6 @@
         <p class="dialog-description">댓글은 승인 전까지 공개되지 않습니다. 개인정보·외부 링크·괴롭힘 표현을 확인하세요.</p>
         <div id="commentAdminList" class="borrowed-list"></div>
       </section>
-      <button class="text-button" id="logoutButton" type="button">운영자 로그아웃</button>
     </dialog>
 
     <dialog id="editBookDialog" class="edit-book-dialog">
@@ -276,6 +279,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script src="./agent-demo.js?v=2" defer></script>
     <script src="./server-api.js?v=1" defer></script>
-    <script src="./app.js?v=27" defer></script>
+    <script src="./app.js?v=28" defer></script>
   </body>
 </html>

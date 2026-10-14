@@ -47,7 +47,7 @@ declare
   clean_alias text := btrim(coalesce(p_author_alias, ''));
   result jsonb;
 begin
-  if auth.uid() is null or (auth.jwt() ->> 'email') <> 'operator@bingo.local' then
+  if auth.uid() is distinct from 'f0d2a994-5837-4bbb-9f27-818f079d4c65'::uuid then
     raise exception 'operator authentication required' using errcode = '42501';
   end if;
   if char_length(clean_alias) not between 1 and 100 then
