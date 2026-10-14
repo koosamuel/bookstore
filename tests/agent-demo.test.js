@@ -163,6 +163,8 @@ test("Claude 연결은 운영자 승인형 서버 함수와 개인정보 차단�
   assert.match(edge, /auth\/v1\/user/);
   assert.match(edge, /containsSensitiveText/);
   assert.match(edge, /external transfer consent required/);
+  assert.match(edge, /Claude API key was rejected/);
+  assert.match(js, /새 키로 교체해 주세요/);
   assert.doesNotMatch(edge, /sk-ant-/);
 });
 

@@ -757,8 +757,14 @@ async function runClaudePageAgent() {
     localStorage.setItem(agentDraftKey(selectedWork, selectedPage), inputText);
     renderAgentSuggestions(data);
   } catch (error) {
-    const message = String(error?.message || error || "").toLowerCase();
+    let serverMessage = "";
+    try {
+      const payload = await error?.context?.clone?.().json();
+      serverMessage = String(payload?.error || "");
+    } catch { /* 응답 본문을 읽을 수 없으면 기본 오류 문구를 사용한다. */ }
+    const message = `${String(error?.message || error || "")} ${serverMessage}`.toLowerCase();
     if (message.includes("sensitive")) $("#agentError").textContent = "개인정보 후보가 있어 Claude로 보내지 않았습니다.";
+    else if (message.includes("key was rejected")) $("#agentError").textContent = "Claude API 키가 유효하지 않습니다. 새 키로 교체해 주세요.";
     else if (message.includes("401") || message.includes("authentication")) $("#agentError").textContent = "운영자 로그인을 다시 확인해 주세요.";
     else if (message.includes("disabled") || message.includes("configured") || message.includes("503")) $("#agentError").textContent = "Claude 서버 연결을 준비해 주세요.";
     else $("#agentError").textContent = "Claude 연결에 실패했습니다. 서버 설정을 확인해 주세요.";

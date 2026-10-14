@@ -370,3 +370,4 @@
 - 반환값은 원문에 실제로 존재하는 구간을 대상으로 한 최대 5개의 선택 제안만 허용하며, 적용 여부는 운영자가 결정한다.
 - `CLAUDE_EXTERNAL_AI_ENABLED` 비밀값으로 즉시 비활성화할 수 있다. 키 값은 노트·코드·Git 기록에 남기지 않는다.
 - Supabase 프로젝트에 `ANTHROPIC_API_KEY`, `CLAUDE_EXTERNAL_AI_ENABLED`, `ANTHROPIC_MODEL` 비밀값을 암호화 저장하고 `generate-book-content` 함수를 배포했다. 운영자 세션을 이용한 실제 화면 호출은 정적 사이트 배포 후 확인한다.
+- 실제 배포 화면에서 운영자 세션과 함수 호출까지 성공했지만 Anthropic이 메모장에 있던 기존 키를 HTTP 401로 거부했다. 새 Anthropic API 키로 Supabase의 `ANTHROPIC_API_KEY` 비밀값을 교체해야 외부 제안이 완전히 동작한다.

@@ -141,6 +141,9 @@ serve(async (request) => {
 
     if (!claudeResponse.ok) {
       console.error("Claude API request failed", claudeResponse.status);
+      if (claudeResponse.status === 401) {
+        return jsonResponse({ error: "Claude API key was rejected" }, 502);
+      }
       return jsonResponse({ error: "Claude API request failed" }, 502);
     }
 
