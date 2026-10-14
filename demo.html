@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=14" />
+    <link rel="stylesheet" href="./demo.css?v=15" />
   </head>
   <body>
     <header class="demo-header">
@@ -23,89 +23,91 @@
         </div>
 
         <nav class="tabs" aria-label="편집 메뉴">
-          <button class="active" type="button" data-tab="pages">읽기·편집</button>
           <button type="button" data-tab="episodes">회차</button>
+          <button class="active" type="button" data-tab="pages">읽기·편집</button>
           <button type="button" data-tab="publishing">표지·대본</button>
           <button type="button" data-tab="review">검토</button>
         </nav>
 
         <section class="panel active" data-panel="pages">
           <div class="reading-editing-grid">
+            <div class="reader-controls">
+              <div class="reader-toolbar" aria-label="읽기 설정">
+                <div class="segmented" role="group" aria-label="읽기 방식">
+                  <button class="active" id="singleModeButton" type="button">한 페이지</button>
+                  <button id="continuousModeButton" type="button">웹툰</button>
+                </div>
+                <div class="reader-actions" role="group" aria-label="화면 설정">
+                  <button id="zoomOutButton" type="button" aria-label="축소">−</button>
+                  <output id="zoomValue" aria-live="polite">100%</output>
+                  <button id="zoomInButton" type="button" aria-label="확대">＋</button>
+                  <button id="fitButton" type="button">맞춤</button>
+                  <button id="contrastButton" type="button" aria-pressed="false">고대비</button>
+                  <button id="readerFullscreenButton" type="button">전체화면</button>
+                </div>
+              </div>
+              <div class="reader-status">
+                <div class="reader-status-row" aria-live="polite">
+                  <div class="reader-status-copy">
+                    <strong id="readerLocation">페이지를 준비하고 있습니다.</strong>
+                    <span id="readerMessage">OCR 사용 가능</span>
+                  </div>
+                  <div class="ocr-actions">
+                    <button id="setCurrentCoverButton" type="button">표지로 설정</button>
+                    <button id="ocrRunButton" type="button">OCR 만들기</button>
+                    <button id="ocrUseButton" type="button" hidden>AI 편집으로</button>
+                  </div>
+                </div>
+                <div class="ocr-progress" id="ocrProgress" role="status" hidden>
+                  <span id="ocrProgressBar"></span><strong id="ocrProgressText">OCR을 준비하고 있어요.</strong>
+                </div>
+                <section class="ocr-draft-panel" id="ocrDraftPanel" aria-label="OCR 초안" hidden>
+                  <div class="ocr-draft-head"><strong>한글 OCR 초안</strong><span id="ocrConfidence">사람 검수 필요</span></div>
+                  <textarea id="ocrDraftText" rows="5" maxlength="4000" placeholder="OCR 인식 결과가 여기에 표시됩니다."></textarea>
+                  <p class="ocr-quality-warning" id="ocrQualityWarning" role="alert" hidden>한글 손글씨 인식 정확도가 낮아 잘못된 영문 결과를 숨겼습니다. 원본을 보며 직접 입력해 주세요.</p>
+                  <p>원본과 비교해 틀린 글자를 수정해 주세요.</p>
+                </section>
+              </div>
+            </div>
             <div class="reading-column">
-          <div class="reader-toolbar" aria-label="읽기 설정">
-            <div class="segmented" role="group" aria-label="읽기 방식">
-              <button class="active" id="singleModeButton" type="button">한 페이지</button>
-              <button id="continuousModeButton" type="button">웹툰</button>
-            </div>
-            <div class="reader-actions" role="group" aria-label="화면 설정">
-              <button id="zoomOutButton" type="button" aria-label="축소">−</button>
-              <output id="zoomValue" aria-live="polite">100%</output>
-              <button id="zoomInButton" type="button" aria-label="확대">＋</button>
-              <button id="fitButton" type="button">맞춤</button>
-              <button id="contrastButton" type="button" aria-pressed="false">고대비</button>
-              <button id="readerFullscreenButton" type="button">전체화면</button>
-            </div>
-          </div>
-          <div class="reader-status">
-            <div class="reader-status-row" aria-live="polite">
-              <div class="reader-status-copy">
-                <strong id="readerLocation">페이지를 준비하고 있습니다.</strong>
-                <span id="readerMessage">OCR 사용 가능</span>
+              <div class="page-viewer" id="singlePageViewer">
+                <button class="page-nav" id="previousPage" type="button" aria-label="이전 페이지">‹</button>
+                <figure id="pageStage">
+                  <div class="image-pan" id="imagePan"><img id="pageImage" alt="" /></div>
+                  <figcaption id="pageCaption"></figcaption>
+                </figure>
+                <button class="page-nav" id="nextPage" type="button" aria-label="다음 페이지">›</button>
               </div>
-              <div class="ocr-actions">
-                <button id="setCurrentCoverButton" type="button">표지로 설정</button>
-                <button id="ocrRunButton" type="button">OCR 만들기</button>
-                <button id="ocrUseButton" type="button" hidden>AI 편집으로</button>
-              </div>
+              <section class="webtoon-viewer" id="webtoonViewer" hidden aria-label="회차형 웹툰 읽기">
+                <header class="episode-reader-head">
+                  <h3 id="episodeReaderTitle"></h3>
+                  <strong id="episodeProgress">0%</strong>
+                </header>
+                <div class="episode-progress" aria-hidden="true"><span id="episodeProgressBar"></span></div>
+                <div class="continuous-reader" id="continuousReader" aria-label="세로 연결 컷"></div>
+                <nav class="episode-navigation" aria-label="회차 이동">
+                  <button id="previousEpisode" type="button">이전 화</button>
+                  <button id="episodeListButton" type="button">목록</button>
+                  <button id="nextEpisode" type="button">다음 화</button>
+                </nav>
+              </section>
+              <div class="thumbnail-strip" id="thumbnailStrip"></div>
             </div>
-            <div class="ocr-progress" id="ocrProgress" role="status" hidden>
-              <span id="ocrProgressBar"></span><strong id="ocrProgressText">OCR을 준비하고 있어요.</strong>
+            <div class="agent-editor">
+              <header class="agent-editor-head"><h3>현재 페이지 AI 편집</h3></header>
+              <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
+              <form id="agentEditorForm" class="agent-editor-form">
+                <label for="agentPageText"><strong>현재 페이지 문장</strong></label>
+                <textarea id="agentPageText" maxlength="4000" rows="7" placeholder="현재 페이지에서 직접 확인한 문장을 입력하세요."></textarea>
+                <label class="agent-confirm"><input id="agentHumanConfirmed" type="checkbox" /><span>원본과 대조해 확인했습니다.</span></label>
+                <div class="agent-editor-actions"><button class="agent-run-button" type="submit">편집 제안 만들기</button><button id="agentClearButton" type="button">초안 지우기</button></div>
+                <p class="agent-error" id="agentError" role="alert"></p>
+              </form>
+              <section class="agent-result-panel" id="agentResultPanel" hidden aria-live="polite">
+                <div class="agent-result-head"><h4 id="agentResultSummary"></h4></div>
+                <div class="agent-suggestion-list" id="agentSuggestionList"></div>
+              </section>
             </div>
-            <section class="ocr-draft-panel" id="ocrDraftPanel" aria-label="OCR 초안" hidden>
-              <div class="ocr-draft-head"><strong>한글 OCR 초안</strong><span id="ocrConfidence">사람 검수 필요</span></div>
-              <textarea id="ocrDraftText" rows="5" maxlength="4000" placeholder="OCR 인식 결과가 여기에 표시됩니다."></textarea>
-              <p class="ocr-quality-warning" id="ocrQualityWarning" role="alert" hidden>한글 손글씨 인식 정확도가 낮아 잘못된 영문 결과를 숨겼습니다. 원본을 보며 직접 입력해 주세요.</p>
-              <p>원본과 비교해 틀린 글자를 수정해 주세요.</p>
-            </section>
-          </div>
-          <div class="page-viewer" id="singlePageViewer">
-            <button class="page-nav" id="previousPage" type="button" aria-label="이전 페이지">‹</button>
-            <figure id="pageStage">
-              <div class="image-pan" id="imagePan"><img id="pageImage" alt="" /></div>
-              <figcaption id="pageCaption"></figcaption>
-            </figure>
-            <button class="page-nav" id="nextPage" type="button" aria-label="다음 페이지">›</button>
-          </div>
-          <section class="webtoon-viewer" id="webtoonViewer" hidden aria-label="회차형 웹툰 읽기">
-            <header class="episode-reader-head">
-              <h3 id="episodeReaderTitle"></h3>
-              <strong id="episodeProgress">0%</strong>
-            </header>
-            <div class="episode-progress" aria-hidden="true"><span id="episodeProgressBar"></span></div>
-            <div class="continuous-reader" id="continuousReader" aria-label="세로 연결 컷"></div>
-            <nav class="episode-navigation" aria-label="회차 이동">
-              <button id="previousEpisode" type="button">이전 화</button>
-              <button id="episodeListButton" type="button">목록</button>
-              <button id="nextEpisode" type="button">다음 화</button>
-            </nav>
-          </section>
-          <div class="thumbnail-strip" id="thumbnailStrip"></div>
-            </div>
-          <div class="agent-editor">
-            <header class="agent-editor-head"><h3>현재 페이지 AI 편집</h3></header>
-            <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
-            <form id="agentEditorForm" class="agent-editor-form">
-              <label for="agentPageText"><strong>현재 페이지 문장</strong></label>
-              <textarea id="agentPageText" maxlength="4000" rows="7" placeholder="현재 페이지에서 직접 확인한 문장을 입력하세요."></textarea>
-              <label class="agent-confirm"><input id="agentHumanConfirmed" type="checkbox" /><span>원본과 대조해 확인했습니다.</span></label>
-              <div class="agent-editor-actions"><button class="agent-run-button" type="submit">편집 제안 만들기</button><button id="agentClearButton" type="button">초안 지우기</button></div>
-              <p class="agent-error" id="agentError" role="alert"></p>
-            </form>
-            <section class="agent-result-panel" id="agentResultPanel" hidden aria-live="polite">
-              <div class="agent-result-head"><h4 id="agentResultSummary"></h4></div>
-              <div class="agent-suggestion-list" id="agentSuggestionList"></div>
-            </section>
-          </div>
           </div>
         </section>
 
@@ -151,6 +153,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=14"></script>
+    <script src="./demo.js?v=15"></script>
   </body>
 </html>

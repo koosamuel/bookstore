@@ -51,7 +51,11 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   const js = readProjectFile("demo.js");
   assert.match(html, /data-tab="pages">읽기·편집/);
   assert.doesNotMatch(html, /data-tab="agent"/);
+  assert.ok(html.indexOf('data-tab="episodes"') < html.indexOf('data-tab="pages"'));
   assert.match(html, /class="reading-editing-grid"/);
+  assert.match(html, /class="reader-controls"/);
+  assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="reading-column"'));
+  assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="agent-editor"'));
   assert.match(html, /id="agentEditorForm"/);
   assert.match(html, /id="agentHumanConfirmed"/);
   assert.ok(html.indexOf("agent-demo.js") < html.indexOf("demo.js"));
@@ -82,6 +86,7 @@ test("페이지 상태 영역에 기기 내 OCR 초안과 사람 검수 흐름�
 test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다", () => {
   const html = readProjectFile("demo.html");
   const js = readProjectFile("demo.js");
+  const css = readProjectFile("demo.css");
   const sql = readProjectFile("supabase/work-editor.sql");
   assert.match(html, /data-tab="publishing">표지·대본/);
   assert.match(html, /id="selectCoverButton"/);
@@ -91,6 +96,8 @@ test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다",
   assert.match(js, /cover_page:selectedCoverPage/);
   assert.match(js, /script,/);
   assert.match(js, /editorSession\.user\.id/);
+  assert.match(css, /\.cover-editor img \{[^}]*aspect-ratio:3\/4;[^}]*object-fit:contain;/);
+  assert.doesNotMatch(css, /\.image-pan \{[^}]*max-height:/);
   assert.match(sql, /enable row level security/);
   assert.match(sql, /auth\.uid\(\) = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'/);
   assert.match(sql, /revoke all on table public\.work_editor_drafts from anon/);
