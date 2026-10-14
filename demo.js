@@ -37,6 +37,7 @@ let editorSession = null;
 let selectedCoverPage = 1;
 let editorSchemaReady = false;
 let episodeFullscreenMode = false;
+let currentPageCrop = { x:0, y:0, width:100, height:100 };
 const KOREAN_OCR_MIN_CONFIDENCE = 40;
 const KOREAN_OCR_MIN_RATIO = .25;
 const SUPABASE_URL = "https://eidxeualhqvdcxizfmll.supabase.co";
@@ -54,6 +55,37 @@ function fileName(work, index) {
 
 function imagePath(work, index) {
   return `./assets/web/works/${work.assetFolder}/${fileName(work,index)}`;
+}
+
+function episodeTitleKey(work, episodeIndex) { return `bingo-episode-title-${work.folder}-${episodeIndex + 1}`; }
+
+function pageCropKey(work, pageIndex) { return `bingo-page-crop-${work.folder}-${pageIndex + 1}`; }
+
+function normalizeCrop(value) {
+  const crop = value && typeof value === "object" ? value : {};
+  const x = Math.min(Math.max(Number(crop.x) || 0,0),90);
+  const y = Math.min(Math.max(Number(crop.y) || 0,0),90);
+  const width = Math.min(Math.max(Number(crop.width) || 100,10),100-x);
+  const height = Math.min(Math.max(Number(crop.height) || 100,10),100-y);
+  return { x, y, width, height };
+}
+
+function readPageCrop(work, pageIndex) {
+  try { return normalizeCrop(JSON.parse(localStorage.getItem(pageCropKey(work,pageIndex)) || "null")); }
+  catch { return normalizeCrop(null); }
+}
+
+function savePageCrop(work, pageIndex, crop) {
+  const normalized = normalizeCrop(crop);
+  localStorage.setItem(pageCropKey(work,pageIndex),JSON.stringify(normalized));
+  return normalized;
+}
+
+function loadSavedEpisodeTitles(work) {
+  work.episodes.forEach((episode,index) => {
+    const savedTitle = localStorage.getItem(episodeTitleKey(work,index))?.trim();
+    if (savedTitle) episode[1] = savedTitle;
+  });
 }
 
 function editorTableMissing(error) {
@@ -97,7 +129,10 @@ async function loadEditorServerState() {
   }
   (data || []).forEach((draft) => {
     const work = works.find((item) => item.folder === draft.work_key);
-    if (work) work.serverDraft = draft;
+    if (work) {
+      work.serverDraft = draft;
+      if (draft.title?.trim()) work.title = draft.title.trim();
+    }
   });
   editorSchemaReady = true;
   $("#editorLoginLink").hidden = true;
@@ -109,9 +144,6 @@ function renderPublishingEditor() {
   if (!selectedWork) return;
   const draft = draftFor(selectedWork);
   selectedCoverPage = Math.min(Math.max(Number(draft?.cover_page || selectedCoverPage || 1),1),selectedWork.count);
-  $("#coverPreview").src = imagePath(selectedWork, selectedCoverPage - 1);
-  $("#coverPreview").alt = `${selectedWork.title} ${selectedCoverPage}쪽 표지 미리보기`;
-  $("#coverPageLabel").textContent = `${selectedCoverPage}쪽`;
   $("#workScript").value = draft?.script || "";
   $("#scriptLength").textContent = String($("#workScript").value.length);
   if (!isOperatorSession()) {
@@ -188,6 +220,21 @@ function enterEpisodeFullscreen() {
   fullscreenRequest?.catch(() => { $("#readerMessage").textContent = "화면 전체 보기로 열었습니다."; });
 }
 
+function renderEpisodeList() {
+  if (!selectedWork) return;
+  $("#episodeCount").textContent = `총 ${selectedWork.episodes.length}화`;
+  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}" aria-label="${number}화 ${escapeHtml(title)} 열기">
+    <img src="${imagePath(selectedWork,start-1)}" alt="" loading="lazy" />
+    <span class="episode-copy"><strong>${number}화 · ${escapeHtml(title)}</strong><small>${start}~${end}쪽</small></span>
+    <span class="episode-open">열기</span>
+  </button>`).join("");
+  document.querySelectorAll("[data-episode-start]").forEach((button) => button.addEventListener("click", () => {
+    selectedEpisode = selectedWork.episodes.findIndex((episode) => episode[2] === Number(button.dataset.episodeStart));
+    selectedPage = Number(button.dataset.episodeStart) - 1;
+    enterEpisodeFullscreen();
+  }));
+}
+
 function leaveEpisodeFullscreen({ exitBrowserFullscreen = true } = {}) {
   if (!episodeFullscreenMode) return;
   episodeFullscreenMode = false;
@@ -201,26 +248,17 @@ function leaveEpisodeFullscreen({ exitBrowserFullscreen = true } = {}) {
 
 function openWork(index) {
   selectedWork = works[index];
+  loadSavedEpisodeTitles(selectedWork);
   selectedCoverPage = Number(draftFor(selectedWork)?.cover_page || 1);
   selectedPage = Number(localStorage.getItem(progressKey(selectedWork)) || 0);
   if (!Number.isInteger(selectedPage) || selectedPage < 0 || selectedPage >= selectedWork.count) selectedPage = 0;
   selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
   $("#demoGrid").hidden = true; $("#workspace").hidden = false;
   $("#workTitle").textContent = selectedWork.title;
-  $("#episodeCount").textContent = `총 ${selectedWork.episodes.length}화`;
-  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}" aria-label="${number}화 ${escapeHtml(title)} 열기">
-    <img src="${imagePath(selectedWork,start-1)}" alt="" loading="lazy" />
-    <span class="episode-copy"><strong>${number}화 · ${escapeHtml(title)}</strong><small>${start}~${end}쪽</small></span>
-    <span class="episode-open">열기</span>
-  </button>`).join("");
+  renderEpisodeList();
   $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${selectedWork.notice}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p>`;
   $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
   document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
-  document.querySelectorAll("[data-episode-start]").forEach((button) => button.addEventListener("click", () => {
-    selectedEpisode = selectedWork.episodes.findIndex((episode) => episode[2] === Number(button.dataset.episodeStart));
-    selectedPage = Number(button.dataset.episodeStart) - 1;
-    enterEpisodeFullscreen();
-  }));
   if (readerOnlyMode) {
     document.body.classList.add("reader-only");
     document.title = `${selectedWork.title} · 카툰 전체화면`;
@@ -249,6 +287,8 @@ function showPage(index) {
   document.querySelectorAll("[data-page]").forEach((button) => button.classList.toggle("active",Number(button.dataset.page) === selectedPage));
   document.querySelector(`[data-page="${selectedPage}"]`)?.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   localStorage.setItem(progressKey(selectedWork),String(selectedPage));
+  currentPageCrop = readPageCrop(selectedWork,selectedPage);
+  applyCropBox(currentPageCrop);
   applyZoom();
   loadOcrPageDraft();
   loadAgentPageDraft();
@@ -410,8 +450,16 @@ function sendOcrDraftToAgent() {
 
 function loadAgentPageDraft() {
   if (!selectedWork || readerOnlyMode) return;
+  selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
+  const [episodeNumber,episodeTitle] = selectedWork.episodes[selectedEpisode];
   $("#agentPageContext").textContent = `${selectedWork.title} · ${selectedPage + 1}/${selectedWork.count}쪽`;
-  $("#agentEpisodeContext").textContent = temporaryEpisodeLabel(selectedWork, selectedPage + 1);
+  $("#agentEpisodeContext").textContent = `${episodeNumber}화`;
+  $("#agentEpisodeTitle").value = episodeTitle;
+  const currentPageIsCover = selectedCoverPage === selectedPage + 1;
+  $("#coverTitleEditor").hidden = !currentPageIsCover;
+  $("#selectedCoverLabel").textContent = currentPageIsCover ? `${selectedCoverPage}쪽` : "";
+  $("#workTitleInput").value = selectedWork.title;
+  $("#setCurrentCoverButton").textContent = currentPageIsCover ? "표지 선택됨" : "표지로 설정";
   $("#agentPageText").value = localStorage.getItem(agentDraftKey(selectedWork, selectedPage)) || "";
   $("#agentHumanConfirmed").checked = false;
   $("#agentError").textContent = "";
@@ -441,7 +489,7 @@ function runPageAgent(event) {
       localOnly:true,
       humanConfirmed:true,
       bookId:selectedWork.folder,
-      episodeId:temporaryEpisodeLabel(selectedWork, selectedPage + 1),
+      episodeId:`${selectedWork.episodes[selectedEpisode][0]}화 ${selectedWork.episodes[selectedEpisode][1]}`,
       sourceVersion:fileName(selectedWork, selectedPage),
       inputText:$("#agentPageText").value,
     });
@@ -475,6 +523,32 @@ function episodeProgressKey(work, episodeNumber) {
   return `bingo-demo-episode-progress-${work.folder}-${episodeNumber}`;
 }
 
+function applyCropBox(crop) {
+  const box = $("#cropBox");
+  if (!box) return;
+  const normalized = normalizeCrop(crop);
+  box.style.left = `${normalized.x}%`;
+  box.style.top = `${normalized.y}%`;
+  box.style.width = `${normalized.width}%`;
+  box.style.height = `${normalized.height}%`;
+}
+
+function applyContinuousCrop(image) {
+  const frame = image.closest(".continuous-crop");
+  const crop = normalizeCrop({
+    x:Number(frame.dataset.cropX), y:Number(frame.dataset.cropY),
+    width:Number(frame.dataset.cropWidth), height:Number(frame.dataset.cropHeight)
+  });
+  const update = () => {
+    if (!image.naturalWidth || !image.naturalHeight) return;
+    frame.style.aspectRatio = `${image.naturalWidth * crop.width} / ${image.naturalHeight * crop.height}`;
+    image.style.width = `${10000 / crop.width}%`;
+    image.style.left = `${-100 * crop.x / crop.width}%`;
+    image.style.top = `${-100 * crop.y / crop.height}%`;
+  };
+  if (image.complete) update(); else image.addEventListener("load",update,{once:true});
+}
+
 function renderContinuousReader() {
   const episode = selectedWork.episodes[selectedEpisode];
   const [number, episodeTitle, episodeStart, episodeEnd] = episode;
@@ -495,10 +569,11 @@ function renderContinuousReader() {
   $("#nextEpisode").disabled = selectedEpisode === selectedWork.episodes.length - 1;
   $("#continuousReader").innerHTML = Array.from({length:end-start+1},(_,offset) => {
     const page = start + offset - 1;
+    const crop = readPageCrop(selectedWork,page);
     const pageLabel = readerOnlyMode ? `${offset+1}/${end-start+1}쪽` : `임시 컷 ${offset+1}/${end-start+1} · 원본 ${page+1}쪽`;
-    return `<figure class="continuous-page" id="continuous-page-${page+1}"><img src="${imagePath(selectedWork,page)}" alt="${title} ${pageLabel}" loading="lazy"><figcaption>${pageLabel}</figcaption></figure>`;
+    return `<figure class="continuous-page" id="continuous-page-${page+1}"><div class="continuous-crop" data-crop-x="${crop.x}" data-crop-y="${crop.y}" data-crop-width="${crop.width}" data-crop-height="${crop.height}"><img src="${imagePath(selectedWork,page)}" alt="${title} ${pageLabel}" loading="lazy"></div><figcaption>${pageLabel}</figcaption></figure>`;
   }).join("");
-  $("#continuousReader").querySelectorAll("img").forEach((image) => addImageStatusHandlers(image));
+  $("#continuousReader").querySelectorAll("img").forEach((image) => { addImageStatusHandlers(image); applyContinuousCrop(image); });
   continuousObserver?.disconnect();
   continuousObserver = new IntersectionObserver((entries) => {
     if (readerMode !== "continuous") return;
@@ -551,8 +626,7 @@ function setZoom(value) {
 }
 
 function applyZoom() {
-  const image = $("#pageImage");
-  image.style.width = `${Math.round(zoom*100)}%`;
+  $("#cropStage").style.width = `${Math.round(zoom*100)}%`;
 }
 
 function addImageStatusHandlers(image) {
@@ -570,6 +644,7 @@ function setupPanControls() {
   let startLeft = 0;
   let startTop = 0;
   pan.addEventListener("pointerdown",(event) => {
+    if (event.target.closest(".crop-box")) return;
     if (zoom <= 1) return;
     active = true; startX = event.clientX; startY = event.clientY;
     startLeft = pan.scrollLeft; startTop = pan.scrollTop;
@@ -585,6 +660,74 @@ function setupPanControls() {
   pan.addEventListener("pointercancel",finish);
 }
 
+function setupCropControls() {
+  const box = $("#cropBox");
+  const stage = $("#cropStage");
+  let drag = null;
+  const clamp = (value,min,max) => Math.min(Math.max(value,min),max);
+  box.addEventListener("pointerdown",(event) => {
+    if (!selectedWork || event.button !== 0) return;
+    const bounds = stage.getBoundingClientRect();
+    drag = {
+      pointerId:event.pointerId,
+      handle:event.target.dataset.cropHandle || "move",
+      startX:event.clientX,
+      startY:event.clientY,
+      bounds,
+      crop:{...currentPageCrop}
+    };
+    box.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  box.addEventListener("pointermove",(event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const dx = (event.clientX-drag.startX) / drag.bounds.width * 100;
+    const dy = (event.clientY-drag.startY) / drag.bounds.height * 100;
+    const start = drag.crop;
+    const right = start.x + start.width;
+    const bottom = start.y + start.height;
+    let next = {...start};
+    if (drag.handle === "move") {
+      next.x = clamp(start.x+dx,0,100-start.width);
+      next.y = clamp(start.y+dy,0,100-start.height);
+    } else {
+      if (drag.handle.includes("w")) { next.x = clamp(start.x+dx,0,right-10); next.width = right-next.x; }
+      if (drag.handle.includes("e")) next.width = clamp(start.width+dx,10,100-start.x);
+      if (drag.handle.includes("n")) { next.y = clamp(start.y+dy,0,bottom-10); next.height = bottom-next.y; }
+      if (drag.handle.includes("s")) next.height = clamp(start.height+dy,10,100-start.y);
+    }
+    currentPageCrop = normalizeCrop(next);
+    applyCropBox(currentPageCrop);
+  });
+  const finish = (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    currentPageCrop = savePageCrop(selectedWork,selectedPage,currentPageCrop);
+    $("#readerMessage").textContent = "최종 표시 영역을 저장했습니다.";
+    if (box.hasPointerCapture(event.pointerId)) box.releasePointerCapture(event.pointerId);
+    drag = null;
+  };
+  box.addEventListener("pointerup",finish);
+  box.addEventListener("pointercancel",finish);
+}
+
+function saveEpisodeTitle() {
+  if (!selectedWork) return;
+  const input = $("#agentEpisodeTitle");
+  const title = input.value.trim();
+  const episodeIndex = episodeIndexForPage(selectedWork,selectedPage+1);
+  if (!title) {
+    input.value = selectedWork.episodes[episodeIndex][1];
+    $("#agentError").textContent = "회차 제목을 입력해 주세요.";
+    return;
+  }
+  selectedWork.episodes[episodeIndex][1] = title;
+  localStorage.setItem(episodeTitleKey(selectedWork,episodeIndex),title);
+  renderEpisodeList();
+  if (readerMode === "continuous") renderContinuousReader();
+  $("#agentError").textContent = `${selectedWork.episodes[episodeIndex][0]}화 제목을 저장했습니다.`;
+}
+
 function showTab(name) {
   document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active",button.dataset.tab === name));
   document.querySelectorAll("[data-panel]").forEach((panel) => { const active = panel.dataset.panel === name; panel.classList.toggle("active",active); panel.hidden = !active; });
@@ -594,11 +737,25 @@ function showTab(name) {
 function selectCurrentPageAsCover() {
   if (!selectedWork) return;
   selectedCoverPage = selectedPage + 1;
-  $("#coverPreview").src = imagePath(selectedWork, selectedPage);
-  $("#coverPreview").alt = `${selectedWork.title} ${selectedCoverPage}쪽 표지 미리보기`;
-  $("#coverPageLabel").textContent = `${selectedCoverPage}쪽`;
+  $("#coverTitleEditor").hidden = false;
+  $("#selectedCoverLabel").textContent = `${selectedCoverPage}쪽`;
+  $("#workTitleInput").value = selectedWork.title;
   $("#readerMessage").textContent = `${selectedCoverPage}쪽을 표지로 선택했습니다.`;
+  $("#setCurrentCoverButton").textContent = "표지 선택됨";
   markPublishingChanged();
+  $("#workTitleInput").focus();
+}
+
+function saveWorkTitle() {
+  if (!selectedWork) return;
+  const input = $("#workTitleInput");
+  const title = input.value.trim();
+  if (!title) { input.value = selectedWork.title; return; }
+  selectedWork.title = title;
+  $("#workTitle").textContent = title;
+  $("#agentPageContext").textContent = `${title} · ${selectedPage + 1}/${selectedWork.count}쪽`;
+  markPublishingChanged();
+  renderCards();
 }
 
 async function initializeEditor() {
@@ -631,11 +788,21 @@ $("#ocrDraftText").addEventListener("input",() => {
   $("#ocrUseButton").hidden = !$("#ocrDraftText").value.trim();
 });
 $("#agentEditorForm").addEventListener("submit",runPageAgent);
+$("#agentEpisodeTitle").addEventListener("change",saveEpisodeTitle);
+$("#agentEpisodeTitle").addEventListener("keydown",(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } });
 $("#agentPageText").addEventListener("input",() => { if (selectedWork) localStorage.setItem(agentDraftKey(selectedWork, selectedPage), $("#agentPageText").value); });
 $("#agentSuggestionList").addEventListener("click",(event) => { const button = event.target.closest("[data-agent-suggestion]"); if (button) applyAgentSuggestion(button.dataset.agentSuggestion); });
 $("#agentClearButton").addEventListener("click",() => { if (!selectedWork) return; localStorage.removeItem(agentDraftKey(selectedWork, selectedPage)); $("#agentPageText").value = ""; $("#agentHumanConfirmed").checked = false; $("#agentResultPanel").hidden = true; $("#agentError").textContent = "이 페이지의 기기 내 초안을 지웠습니다."; currentAgentOutput = null; });
 $("#setCurrentCoverButton").addEventListener("click",selectCurrentPageAsCover);
-$("#selectCoverButton").addEventListener("click",selectCurrentPageAsCover);
+$("#workTitleInput").addEventListener("change",saveWorkTitle);
+$("#workTitleInput").addEventListener("keydown",(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } });
+$("#cropResetButton").addEventListener("click",() => {
+  if (!selectedWork) return;
+  localStorage.removeItem(pageCropKey(selectedWork,selectedPage));
+  currentPageCrop = normalizeCrop(null);
+  applyCropBox(currentPageCrop);
+  $("#readerMessage").textContent = "현재 페이지를 전체 영역으로 되돌렸습니다.";
+});
 $("#workScript").addEventListener("input",() => {
   $("#scriptLength").textContent = String($("#workScript").value.length);
   markPublishingChanged();
@@ -648,6 +815,7 @@ $("#readerFullscreenButton").addEventListener("click",async () => {
 });
 addImageStatusHandlers($("#pageImage"));
 setupPanControls();
+setupCropControls();
 document.addEventListener("keydown",(event) => {
   if (!selectedWork || $("#workspace").hidden || event.target.matches("input,textarea,select")) return;
   if (readerMode === "single" && event.key === "ArrowLeft") showPage(selectedPage-1);

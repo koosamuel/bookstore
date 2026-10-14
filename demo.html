@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=16" />
+    <link rel="stylesheet" href="./demo.css?v=17" />
   </head>
   <body>
     <header class="demo-header">
@@ -25,7 +25,7 @@
         <nav class="tabs" aria-label="편집 메뉴">
           <button class="active" type="button" data-tab="episodes">회차</button>
           <button type="button" data-tab="pages">읽기·편집</button>
-          <button type="button" data-tab="publishing">표지·대본</button>
+          <button type="button" data-tab="publishing">대본·저장</button>
           <button type="button" data-tab="review">검토</button>
         </nav>
 
@@ -73,8 +73,20 @@
               <div class="page-viewer" id="singlePageViewer">
                 <button class="page-nav" id="previousPage" type="button" aria-label="이전 페이지">‹</button>
                 <figure id="pageStage">
-                  <div class="image-pan" id="imagePan"><img id="pageImage" alt="" /></div>
+                  <div class="image-pan" id="imagePan">
+                    <div class="crop-stage" id="cropStage">
+                      <img id="pageImage" alt="" />
+                      <div class="crop-box" id="cropBox" role="group" aria-label="최종 표시 영역. 안쪽을 끌어 이동하거나 네 모서리를 끌어 크기를 조절하세요.">
+                        <span class="crop-label">최종 표시 영역</span>
+                        <button class="crop-handle crop-handle-nw" type="button" data-crop-handle="nw" aria-label="왼쪽 위 모서리 조절"></button>
+                        <button class="crop-handle crop-handle-ne" type="button" data-crop-handle="ne" aria-label="오른쪽 위 모서리 조절"></button>
+                        <button class="crop-handle crop-handle-sw" type="button" data-crop-handle="sw" aria-label="왼쪽 아래 모서리 조절"></button>
+                        <button class="crop-handle crop-handle-se" type="button" data-crop-handle="se" aria-label="오른쪽 아래 모서리 조절"></button>
+                      </div>
+                    </div>
+                  </div>
                   <figcaption id="pageCaption"></figcaption>
+                  <div class="crop-guide"><span>사각형 안쪽이 최종 화면에 표시됩니다. 안쪽 또는 모서리를 끌어 조절하세요.</span><button id="cropResetButton" type="button">전체 영역</button></div>
                 </figure>
                 <button class="page-nav" id="nextPage" type="button" aria-label="다음 페이지">›</button>
               </div>
@@ -97,6 +109,13 @@
               <header class="agent-editor-head"><h3>현재 페이지 AI 편집</h3></header>
               <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
               <form id="agentEditorForm" class="agent-editor-form">
+                <section class="cover-title-editor" id="coverTitleEditor" hidden>
+                  <div><strong>선택한 표지</strong><span id="selectedCoverLabel"></span></div>
+                  <label for="workTitleInput"><strong>작품 제목</strong></label>
+                  <input id="workTitleInput" type="text" maxlength="80" placeholder="표지에 사용할 작품 제목을 입력하세요." />
+                </section>
+                <label for="agentEpisodeTitle"><strong>회차 제목</strong></label>
+                <input id="agentEpisodeTitle" type="text" maxlength="60" placeholder="현재 페이지가 속한 회차 제목을 입력하세요." />
                 <label for="agentPageText"><strong>현재 페이지 문장</strong></label>
                 <textarea id="agentPageText" maxlength="4000" rows="7" placeholder="현재 페이지에서 직접 확인한 문장을 입력하세요."></textarea>
                 <label class="agent-confirm"><input id="agentHumanConfirmed" type="checkbox" /><span>원본과 대조해 확인했습니다.</span></label>
@@ -121,14 +140,6 @@
 
         <section class="panel" data-panel="publishing" hidden>
           <form class="publishing-editor" id="publishingEditorForm">
-            <section class="cover-editor" aria-labelledby="coverEditorTitle">
-              <div>
-                <h3 id="coverEditorTitle">표지</h3>
-                <p id="coverPageLabel">1쪽</p>
-              </div>
-              <img id="coverPreview" alt="선택한 표지 미리보기" />
-              <button id="selectCoverButton" type="button">현재 페이지를 표지로</button>
-            </section>
             <label class="script-editor" for="workScript">
               <strong>대본</strong>
               <textarea id="workScript" rows="16" maxlength="50000" placeholder="작품 전체 대본을 입력하세요."></textarea>
@@ -157,6 +168,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=16"></script>
+    <script src="./demo.js?v=17"></script>
   </body>
 </html>

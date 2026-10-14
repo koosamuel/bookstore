@@ -58,7 +58,10 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(html, /class="reader-controls"/);
   assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="reading-column"'));
   assert.ok(html.indexOf('class="reader-controls"') < html.indexOf('class="agent-editor"'));
+  assert.match(readProjectFile("demo.css"), /\.reader-controls \{[^}]*grid-template-columns:minmax\(0,1\.35fr\) minmax\(320px,\.65fr\)/);
+  assert.match(readProjectFile("demo.css"), /\.reader-status \{[^}]*grid-column:2/);
   assert.match(html, /id="agentEditorForm"/);
+  assert.match(html, /id="agentEpisodeTitle"/);
   assert.match(html, /id="agentHumanConfirmed"/);
   assert.ok(html.indexOf("agent-demo.js") < html.indexOf("demo.js"));
   assert.match(js, /sourceScope:"actual-local-review"/);
@@ -72,8 +75,18 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /requestFullscreen/);
   assert.match(js, /회차 목록/);
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);
+  assert.match(js, /localStorage\.setItem\(episodeTitleKey/);
+  assert.match(js, /function renderEpisodeList/);
+  assert.match(html, /id="cropBox"/);
+  assert.match(html, /data-crop-handle="nw"/);
+  assert.match(html, /id="cropResetButton"/);
+  assert.match(js, /localStorage\.setItem\(pageCropKey/);
+  assert.match(js, /function applyContinuousCrop/);
   assert.match(html, /<h1>작품 편집<\/h1>/);
   assert.match(html, /id="setCurrentCoverButton"/);
+  assert.match(html, /id="coverTitleEditor"/);
+  assert.match(html, /id="workTitleInput"/);
+  assert.match(js, /function saveWorkTitle/);
   assert.doesNotMatch(`${html}\n${js}`, /PRIVATE EDITOR|대표 데모|임시 제목|안전한 편집 원칙|이 데모 보기/);
 });
 
@@ -97,15 +110,15 @@ test("운영자는 표지 페이지와 작품 대본을 서버에 저장한다",
   const js = readProjectFile("demo.js");
   const css = readProjectFile("demo.css");
   const sql = readProjectFile("supabase/work-editor.sql");
-  assert.match(html, /data-tab="publishing">표지·대본/);
-  assert.match(html, /id="selectCoverButton"/);
+  assert.match(html, /data-tab="publishing">대본·저장/);
+  assert.doesNotMatch(html, /id="selectCoverButton"/);
   assert.match(html, /id="workScript"/);
   assert.match(html, /id="savePublishingButton"/);
   assert.match(js, /from\("work_editor_drafts"\)\.upsert/);
   assert.match(js, /cover_page:selectedCoverPage/);
   assert.match(js, /script,/);
   assert.match(js, /editorSession\.user\.id/);
-  assert.match(css, /\.cover-editor img \{[^}]*aspect-ratio:3\/4;[^}]*object-fit:contain;/);
+  assert.match(css, /\.crop-stage \{[^}]*position:relative/);
   assert.doesNotMatch(css, /\.image-pan \{[^}]*max-height:/);
   assert.match(sql, /enable row level security/);
   assert.match(sql, /auth\.uid\(\) = 'f0d2a994-5837-4bbb-9f27-818f079d4c65'/);
