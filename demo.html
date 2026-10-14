@@ -4,55 +4,42 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
-    <title>빙고서점 · 실제 작품 빠른 데모</title>
-    <link rel="stylesheet" href="./demo.css?v=11" />
+    <title>빙고서점 · 작품 편집</title>
+    <link rel="stylesheet" href="./demo.css?v=12" />
   </head>
   <body>
     <header class="demo-header">
-      <div>
-        <p class="eyebrow">PRIVATE EDITOR · 공개 전 검토용</p>
-        <h1>어린이 작품 편집실</h1>
-        <p>원본 이미지를 보며 페이지·에피소드·안전 편집 제안을 함께 검토합니다.</p>
-      </div>
-      <a href="./index.html#my">마이 화면으로 돌아가기</a>
+      <h1>작품 편집</h1>
+      <a href="./index.html#my">마이로</a>
     </header>
 
     <main>
-      <section class="notice" aria-label="데모 주의사항">
-        <strong>안전한 편집 원칙</strong>
-        <span>에이전트는 사람이 확인한 문장만 기기 안에서 검토하며, 원본을 자동으로 바꾸거나 외부로 전송하지 않습니다.</span>
-      </section>
-
-      <section class="demo-grid" id="demoGrid" aria-label="데모 작품 선택"></section>
+      <section class="demo-grid" id="demoGrid" aria-label="작품 선택"></section>
 
       <section class="workspace" id="workspace" hidden>
         <div class="workspace-head">
-          <div>
-            <p class="eyebrow" id="workCode"></p>
-            <h2 id="workTitle"></h2>
-            <p id="workSummary"></p>
-          </div>
-          <button id="closeWorkspace" type="button">작품 선택으로</button>
+          <h2 id="workTitle"></h2>
+          <button id="closeWorkspace" type="button">다른 작품</button>
         </div>
 
-        <nav class="tabs" aria-label="데모 단계">
-          <button class="active" type="button" data-tab="pages">작품 읽기</button>
-          <button type="button" data-tab="agent">AI 편집 도우미</button>
-          <button type="button" data-tab="episodes">임시 분할 확인</button>
-          <button type="button" data-tab="review">검토·공개 흐름</button>
+        <nav class="tabs" aria-label="편집 메뉴">
+          <button class="active" type="button" data-tab="pages">읽기</button>
+          <button type="button" data-tab="agent">AI 편집</button>
+          <button type="button" data-tab="episodes">회차</button>
+          <button type="button" data-tab="review">검토</button>
         </nav>
 
         <section class="panel active" data-panel="pages">
           <div class="reader-toolbar" aria-label="읽기 설정">
             <div class="segmented" role="group" aria-label="읽기 방식">
               <button class="active" id="singleModeButton" type="button">한 페이지</button>
-              <button id="continuousModeButton" type="button">웹툰으로 읽기</button>
+              <button id="continuousModeButton" type="button">웹툰</button>
             </div>
             <div class="reader-actions" role="group" aria-label="화면 설정">
               <button id="zoomOutButton" type="button" aria-label="축소">−</button>
               <output id="zoomValue" aria-live="polite">100%</output>
               <button id="zoomInButton" type="button" aria-label="확대">＋</button>
-              <button id="fitButton" type="button">화면 맞춤</button>
+              <button id="fitButton" type="button">맞춤</button>
               <button id="contrastButton" type="button" aria-pressed="false">고대비</button>
               <button id="readerFullscreenButton" type="button">전체화면</button>
             </div>
@@ -61,11 +48,11 @@
             <div class="reader-status-row" aria-live="polite">
               <div class="reader-status-copy">
                 <strong id="readerLocation">페이지를 준비하고 있습니다.</strong>
-                <span id="readerMessage">원본 이미지를 불러오면 OCR 초안을 만들 수 있습니다.</span>
+                <span id="readerMessage">OCR 사용 가능</span>
               </div>
               <div class="ocr-actions">
-                <button id="ocrRunButton" type="button">한글 OCR 초안 생성</button>
-                <button id="ocrUseButton" type="button" hidden>편집 도우미로 보내기</button>
+                <button id="ocrRunButton" type="button">OCR 만들기</button>
+                <button id="ocrUseButton" type="button" hidden>AI 편집으로</button>
               </div>
             </div>
             <div class="ocr-progress" id="ocrProgress" role="status" hidden>
@@ -75,7 +62,7 @@
               <div class="ocr-draft-head"><strong>한글 OCR 초안</strong><span id="ocrConfidence">사람 검수 필요</span></div>
               <textarea id="ocrDraftText" rows="5" maxlength="4000" placeholder="OCR 인식 결과가 여기에 표시됩니다."></textarea>
               <p class="ocr-quality-warning" id="ocrQualityWarning" role="alert" hidden>한글 손글씨 인식 정확도가 낮아 잘못된 영문 결과를 숨겼습니다. 원본을 보며 직접 입력해 주세요.</p>
-              <p>자동 인식한 초안입니다. 원본 그림과 대조하여 틀린 글자를 고친 뒤에만 확정해 주세요.</p>
+              <p>원본과 비교해 틀린 글자를 수정해 주세요.</p>
             </section>
           </div>
           <div class="page-viewer" id="singlePageViewer">
@@ -88,11 +75,7 @@
           </div>
           <section class="webtoon-viewer" id="webtoonViewer" hidden aria-label="회차형 웹툰 읽기">
             <header class="episode-reader-head">
-              <div>
-                <p class="eyebrow">WEBTOON DEMO · 원본 페이지를 임시 컷으로 표시</p>
-                <h3 id="episodeReaderTitle"></h3>
-                <p id="episodeReaderNotice"></p>
-              </div>
+              <h3 id="episodeReaderTitle"></h3>
               <strong id="episodeProgress">0%</strong>
             </header>
             <div class="episode-progress" aria-hidden="true"><span id="episodeProgressBar"></span></div>
@@ -103,45 +86,37 @@
               <button id="nextEpisode" type="button">다음 화</button>
             </nav>
           </section>
-          <aside class="transcript-note" aria-label="전사문 상태">
-            <strong>확정 전사문</strong>
-            <p id="transcriptMessage">OCR 초안을 생성한 뒤 사람 검수를 완료해야 제공합니다. 확인되지 않은 글자는 임의로 확정하지 않습니다.</p>
-          </aside>
           <div class="thumbnail-strip" id="thumbnailStrip"></div>
         </section>
 
         <section class="panel" data-panel="agent" hidden>
           <div class="agent-editor">
-            <header class="agent-editor-head">
-              <div><p class="eyebrow">HUMAN-IN-THE-LOOP AGENT</p><h3>현재 페이지 안전 편집</h3><p>현재 보고 있는 페이지의 확인 문장만 다루며, 제안은 승인하기 전까지 적용되지 않습니다.</p></div>
-              <span class="agent-local-chip">기기 안에서만 실행</span>
-            </header>
+            <header class="agent-editor-head"><h3>현재 페이지 AI 편집</h3></header>
             <div class="agent-context" aria-live="polite"><strong id="agentPageContext">페이지를 선택해 주세요.</strong><span id="agentEpisodeContext"></span></div>
             <form id="agentEditorForm" class="agent-editor-form">
-              <label for="agentPageText"><strong>사람이 확인한 현재 페이지 문장</strong><small>OCR 결과를 그대로 넣지 말고 원본 그림을 보며 먼저 확인해 주세요.</small></label>
+              <label for="agentPageText"><strong>현재 페이지 문장</strong></label>
               <textarea id="agentPageText" maxlength="4000" rows="7" placeholder="현재 페이지에서 직접 확인한 문장을 입력하세요."></textarea>
-              <label class="agent-confirm"><input id="agentHumanConfirmed" type="checkbox" /><span>원본 이미지를 보며 이 문장을 사람이 확인했습니다.</span></label>
-              <div class="agent-editor-actions"><button class="agent-run-button" type="submit">안전 편집 제안 만들기</button><button id="agentClearButton" type="button">이 페이지 초안 지우기</button></div>
+              <label class="agent-confirm"><input id="agentHumanConfirmed" type="checkbox" /><span>원본과 대조해 확인했습니다.</span></label>
+              <div class="agent-editor-actions"><button class="agent-run-button" type="submit">편집 제안 만들기</button><button id="agentClearButton" type="button">초안 지우기</button></div>
               <p class="agent-error" id="agentError" role="alert"></p>
             </form>
             <section class="agent-result-panel" id="agentResultPanel" hidden aria-live="polite">
-              <div class="agent-result-head"><div><p class="eyebrow">AGENT DRAFT</p><h4 id="agentResultSummary"></h4></div><span>사람 승인 필요</span></div>
+              <div class="agent-result-head"><h4 id="agentResultSummary"></h4></div>
               <div class="agent-suggestion-list" id="agentSuggestionList"></div>
             </section>
           </div>
         </section>
 
         <section class="panel" data-panel="episodes" hidden>
-          <p class="section-help"><strong>내용 분석 결과가 아닙니다.</strong> 아래 구간은 화면 기능 확인을 위한 임시 분할 예시이며, OCR·사람 검수 후 교체합니다.</p>
           <div class="episode-list" id="episodeList"></div>
         </section>
 
         <section class="panel" data-panel="review" hidden>
           <div class="review-flow">
-            <article><span>1</span><h3>원본 확인</h3><p>페이지 순서와 누락 여부를 확인합니다.</p></article>
-            <article><span>2</span><h3>전사·내용 확인</h3><p>OCR을 사람이 고친 뒤에만 내용 기반 제안을 만듭니다.</p></article>
-            <article><span>3</span><h3>사람 검토</h3><p>개인정보·콘텐츠·저작권을 확인합니다.</p></article>
-            <article><span>4</span><h3>보호자 승인</h3><p>승인된 자료만 공개 서점으로 보냅니다.</p></article>
+            <article><span>1</span><h3>원본 확인</h3></article>
+            <article><span>2</span><h3>내용 확인</h3></article>
+            <article><span>3</span><h3>운영자 검토</h3></article>
+            <article><span>4</span><h3>보호자 승인</h3></article>
           </div>
           <div class="review-card" id="reviewCard"></div>
         </section>
@@ -150,6 +125,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=11"></script>
+    <script src="./demo.js?v=12"></script>
   </body>
 </html>

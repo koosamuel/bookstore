@@ -1,14 +1,11 @@
 const works = [
   {
-    code: "DEMO 01 · 01_작품",
-    title: "스포츠 이야기 모음 (임시 제목)",
-    summary: "20장의 실제 원본으로 페이지 탐색과 여러 에피소드 분할을 보여주는 대표 데모입니다.",
+    title: "스포츠 이야기 모음",
     folder: "01_작품",
     assetFolder: "01",
     count: 20,
     firstFile: "001_20260930_201748.jpg",
     timestamps: ["201748","201753","201811","201815","201833","201839","201851","201858","201909","201914","201925","201934","201943","201949","201958","202007","202019","202025","202037","202044"],
-    genre: "스포츠·만화(임시)",
     notice: "페이지 순서 확인 완료. 작품명·에피소드 경계·공개용 작가명과 보호자 동의는 확정 전입니다.",
     episodes: [
       [1,"도입과 작품 안내",1,2], [2,"스포츠 이야기 1",3,5], [3,"스포츠 이야기 2",6,8],
@@ -16,15 +13,12 @@ const works = [
     ]
   },
   {
-    code: "DEMO 02 · 03_작품",
-    title: "게임 1·2·3 모음집 (임시 제목)",
-    summary: "12장의 실제 원본으로 3개 에피소드 목차와 콘텐츠 안내를 함께 보여주는 데모입니다.",
+    title: "게임 1·2·3 모음집",
     folder: "03_작품",
     assetFolder: "03",
     count: 12,
     firstFile: "001_20260930_203620.jpg",
     timestamps: ["203620","203640","203653","203715","203725","203813","203825","203844","203856","203922","203933","203949"],
-    genre: "게임·액션 만화(임시)",
     notice: "무기·전투·유혈 표현이 포함될 수 있어 콘텐츠 안내와 권장 연령을 보호자가 검토해야 합니다.",
     episodes: [[1,"게임 이야기 1",2,4],[2,"게임 이야기 2",5,8],[3,"게임 이야기 3",9,12]]
   }
@@ -57,9 +51,9 @@ function imagePath(work, index) {
 function renderCards() {
   $("#demoGrid").innerHTML = works.map((work,index) => `<article class="demo-card">
     <div class="demo-card-cover"><img src="${imagePath(work,0)}" alt="${work.title} 첫 페이지" /></div>
-    <div class="demo-card-body"><p class="eyebrow">${work.code}</p><h2>${work.title}</h2><p>${work.summary}</p>
-      <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 에피소드 후보</span><span>${work.genre}</span></div>
-      <button type="button" data-open-work="${index}">이 데모 보기</button>
+    <div class="demo-card-body"><h2>${work.title}</h2>
+      <div class="meta"><span>${work.count}쪽</span><span>${work.episodes.length}개 회차</span></div>
+      <button type="button" data-open-work="${index}">열기</button>
     </div></article>`).join("");
   document.querySelectorAll("[data-open-work]").forEach((button) => button.addEventListener("click", () => openWork(Number(button.dataset.openWork))));
 }
@@ -70,10 +64,8 @@ function openWork(index) {
   if (!Number.isInteger(selectedPage) || selectedPage < 0 || selectedPage >= selectedWork.count) selectedPage = 0;
   selectedEpisode = episodeIndexForPage(selectedWork, selectedPage + 1);
   $("#demoGrid").hidden = true; $("#workspace").hidden = false;
-  $("#workCode").textContent = selectedWork.code;
   $("#workTitle").textContent = selectedWork.title;
-  $("#workSummary").textContent = selectedWork.summary;
-  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}"><strong>${number}화</strong><span><strong>${title}</strong><br><small>${start}~${end}쪽 · OCR 전 임시 구간</small></span><span class="status">임시 예시</span></button>`).join("");
+  $("#episodeList").innerHTML = selectedWork.episodes.map(([number,title,start,end]) => `<button class="episode" type="button" data-episode-start="${start}"><strong>${number}화</strong><span><strong>${title}</strong><br><small>${start}~${end}쪽</small></span></button>`).join("");
   $("#reviewCard").innerHTML = `<strong>현재 검토 메모</strong><p>${selectedWork.notice}</p><p><b>공개 상태:</b> 비공개 초안 · 보호자 승인 전</p>`;
   $("#thumbnailStrip").innerHTML = Array.from({length:selectedWork.count},(_,page) => `<button type="button" data-page="${page}" aria-label="${page+1}쪽"><img src="${imagePath(selectedWork,page)}" alt="" loading="lazy"><small>${page+1}</small></button>`).join("");
   document.querySelectorAll("[data-page]").forEach((button) => button.addEventListener("click", () => showPage(Number(button.dataset.page))));
@@ -86,8 +78,6 @@ function openWork(index) {
   if (readerOnlyMode) {
     document.body.classList.add("reader-only");
     document.title = `${selectedWork.title} · 카툰 전체화면`;
-    $("#workCode").textContent = "CARTOON READER";
-    $("#workSummary").textContent = `${selectedWork.count}쪽 전체를 세로로 이어서 읽습니다.`;
     $("#closeWorkspace").textContent = "서점으로";
     showTab("pages");
     setReaderMode("continuous");
@@ -101,14 +91,14 @@ function openWork(index) {
 function showPage(index) {
   if (!selectedWork) return;
   selectedPage = Math.min(Math.max(index,0),selectedWork.count-1);
-  $("#readerMessage").textContent = "원본 이미지를 불러오면 OCR 초안을 만들 수 있습니다.";
+  $("#readerMessage").textContent = "OCR 사용 가능";
   $("#pageImage").src = imagePath(selectedWork,selectedPage);
   $("#pageImage").alt = `${selectedWork.title} ${selectedPage+1}쪽`;
   $("#pageCaption").textContent = `${selectedPage+1} / ${selectedWork.count}쪽 · ${fileName(selectedWork,selectedPage)}`;
   $("#readerLocation").textContent = `${temporaryEpisodeLabel(selectedWork,selectedPage+1)} · ${selectedPage+1}/${selectedWork.count}쪽`;
   $("#previousPage").disabled = selectedPage === 0;
   $("#nextPage").disabled = selectedPage === selectedWork.count-1;
-  if (selectedPage === selectedWork.count-1) $("#readerMessage").textContent = "마지막 페이지입니다. 목차나 썸네일로 다른 페이지를 선택할 수 있습니다.";
+  if (selectedPage === selectedWork.count-1) $("#readerMessage").textContent = "마지막 페이지";
   document.querySelectorAll("[data-page]").forEach((button) => button.classList.toggle("active",Number(button.dataset.page) === selectedPage));
   document.querySelector(`[data-page="${selectedPage}"]`)?.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
   localStorage.setItem(progressKey(selectedWork),String(selectedPage));
@@ -158,11 +148,8 @@ function loadOcrPageDraft() {
     : draft?.confidence === null || draft?.confidence === undefined
     ? "사람 검수 필요"
     : `한글 인식 신뢰도 ${draft.confidence}% · 사람 검수 필요`;
-  $("#ocrRunButton").textContent = draft ? "한글 OCR 다시 생성" : "한글 OCR 초안 생성";
-  $("#transcriptMessage").textContent = draft
-    ? "OCR 초안이 있지만 아직 확정 전사문은 아닙니다. 원본 대조와 사람 검수를 완료해 주세요."
-    : "OCR 초안을 생성한 뒤 사람 검수를 완료해야 제공합니다. 확인되지 않은 글자는 임의로 확정하지 않습니다.";
-  if (draft) $("#readerMessage").textContent = "OCR 초안을 불러왔습니다. 원본과 대조해 검수해 주세요.";
+  $("#ocrRunButton").textContent = draft ? "OCR 다시 만들기" : "OCR 만들기";
+  if (draft) $("#readerMessage").textContent = "OCR 초안 준비됨";
 }
 
 function updateOcrProgress(progress) {
@@ -226,7 +213,7 @@ async function runOcr() {
   $("#ocrProgress").hidden = false;
   $("#ocrDraftPanel").hidden = true;
   $("#ocrUseButton").hidden = true;
-  $("#readerMessage").textContent = "원본 이미지를 기기 안에서 인식하고 있습니다.";
+  $("#readerMessage").textContent = "OCR 처리 중";
   try {
     const [worker, preparedImage] = await Promise.all([
       getOcrWorker(),
@@ -246,10 +233,9 @@ async function runOcr() {
       : `한글 인식 낮음 ${draft.confidence ?? 0}% · 결과 숨김`;
     $("#ocrDraftPanel").hidden = false;
     $("#ocrUseButton").hidden = !draft.text;
-    $("#transcriptMessage").textContent = "OCR 초안이 있지만 아직 확정 전사문은 아닙니다. 원본 대조와 사람 검수를 완료해 주세요.";
     $("#readerMessage").textContent = draft.text
-      ? "OCR 초안을 생성했습니다. 원본과 대조해 틀린 글자를 고쳐 주세요."
-      : "한글 손글씨 인식률이 낮아 잘못된 영문 결과를 숨겼습니다. 원본을 보며 직접 입력해 주세요.";
+      ? "OCR 초안 준비됨"
+      : "인식 결과를 확인해 주세요";
   } catch (error) {
     $("#readerMessage").textContent = `OCR 실패: ${error?.message || "인식 모듈을 실행하지 못했습니다."}`;
     loadOcrPageDraft();
@@ -258,7 +244,7 @@ async function runOcr() {
     $("#ocrRunButton").disabled = false;
     $("#ocrProgress").hidden = true;
     $("#ocrProgressBar").style.width = "0%";
-    $("#ocrRunButton").textContent = readOcrPageDraft() ? "한글 OCR 다시 생성" : "한글 OCR 초안 생성";
+    $("#ocrRunButton").textContent = readOcrPageDraft() ? "OCR 다시 만들기" : "OCR 만들기";
   }
 }
 
@@ -271,7 +257,7 @@ function sendOcrDraftToAgent() {
   showTab("agent");
   $("#agentPageText").value = text;
   $("#agentHumanConfirmed").checked = false;
-  $("#agentError").textContent = "OCR 초안을 가져왔습니다. 원본과 대조한 뒤 확인 표시를 해 주세요.";
+  $("#agentError").textContent = "원본과 대조한 뒤 확인해 주세요.";
 }
 
 function loadAgentPageDraft() {
@@ -351,7 +337,6 @@ function renderContinuousReader() {
   const savedPage = readerOnlyMode ? Number(savedValue || 0) : Number(savedValue || start) - 1;
   selectedPage = Math.min(Math.max(savedPage,start-1),end-1);
   $("#episodeReaderTitle").textContent = readerOnlyMode ? title : `임시 ${number}화 · ${title}`;
-  $("#episodeReaderNotice").textContent = readerOnlyMode ? `${start}~${end}쪽 전체 작품을 원본 순서대로 표시합니다.` : `${selectedWork.notice} 컷 분리 전이므로 ${start}~${end}쪽 원본 전체를 각각 하나의 임시 컷으로 표시합니다.`;
   const initialPosition = selectedPage - start + 2;
   const initialTotal = end - start + 1;
   const initialProgress = Math.round((initialPosition / initialTotal) * 100);
@@ -424,7 +409,7 @@ function applyZoom() {
 
 function addImageStatusHandlers(image) {
   image.addEventListener("load",() => {
-    if (!readOcrPageDraft()) $("#readerMessage").textContent = "원본 이미지를 표시했습니다. OCR 초안을 생성할 수 있습니다.";
+    if (!readOcrPageDraft()) $("#readerMessage").textContent = "OCR 사용 가능";
   });
   image.addEventListener("error",() => { $("#readerMessage").textContent = "이미지를 불러오지 못했습니다. 파일 경로와 로컬 서버를 확인하세요."; });
 }

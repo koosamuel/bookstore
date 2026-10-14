@@ -57,6 +57,9 @@ test("작품 편집 화면에 승인형 Agent 패널을 제공한다", () => {
   assert.match(js, /localOnly:true/);
   assert.match(js, /data-agent-suggestion/);
   assert.match(js, /localStorage\.setItem\(agentDraftKey/);
+  assert.match(html, /<h1>작품 편집<\/h1>/);
+  assert.match(html, /data-tab="pages">읽기/);
+  assert.doesNotMatch(`${html}\n${js}`, /PRIVATE EDITOR|대표 데모|임시 제목|안전한 편집 원칙|이 데모 보기/);
 });
 
 test("페이지 상태 영역에 기기 내 OCR 초안과 사람 검수 흐름을 제공한다", () => {
@@ -70,7 +73,7 @@ test("페이지 상태 영역에 기기 내 OCR 초안과 사람 검수 흐름�
   assert.doesNotMatch(js, /createWorker\("kor\+eng"/);
   assert.match(js, /bingo-ocr-kor-v2-draft-/);
   assert.match(js, /koreanTextSignal/);
-  assert.match(js, /잘못된 영문 결과를 숨겼습니다/);
+  assert.match(html, /잘못된 영문 결과를 숨겼습니다/);
   assert.match(js, /sendOcrDraftToAgent/);
 });
 
