@@ -13,7 +13,9 @@ test("홈·마이 탭과 작가 별칭 선택 UI를 제공한다", () => {
   assert.match(html, /data-primary-tab="my"/);
   assert.match(html, /id="myAuthorSelect"/);
   assert.match(html, /실명·학년·반 없이/);
-  assert.match(html, /tab=materials&amp;v=29"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
+  assert.match(html, /오프라인 키오스크/);
+  assert.doesNotMatch(html, new RegExp(String.fromCodePoint(0xd604, 0xc6b0)));
+  assert.match(html, /tab=materials&amp;v=31"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
 });
 
 test("전체 화면은 모바일 우선 레이아웃과 하단 탭을 기본으로 사용한다", () => {

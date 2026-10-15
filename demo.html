@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=34" />
+    <link rel="stylesheet" href="./demo.css?v=35" />
   </head>
   <body>
     <header class="demo-header">
@@ -210,13 +210,13 @@
 
         <section class="panel" data-panel="materials" hidden>
           <div class="presentation-library">
-            <header><div><strong>발표자료</strong><p>5장 · 6~7분 · 실제 구현 기준</p></div><label for="presentationFileInput">자료 선택</label></header>
+            <header><div><strong>발표자료</strong><p>6장 · 7~8분 · 실제 구현 기준</p></div><label for="presentationFileInput">자료 선택</label></header>
             <input id="presentationFileInput" class="visually-hidden" type="file" accept=".pdf,.ppt,.pptx,image/*" multiple />
             <p id="presentationStatus" role="status">선택한 자료는 이 기기에만 저장됩니다.</p>
             <section class="web-presentation" id="webPresentation" aria-label="웹 PPT 발표">
               <div class="web-slide-stage" id="webSlideStage">
                 <article class="web-slide web-slide-cover active" data-web-slide>
-                  <div><p>현우 MJ 어린이 작가 서점</p><h3>아이의 원본을 지키는<br />AI 출판 보조 서점</h3><small>AI는 편집과 검토 초안을 제안하고, 사람은 공개 여부를 결정합니다.</small></div>
+                  <div><p>어린이 작가 온라인 서점</p><h3>아이의 원본을 지키는<br />AI 출판 보조 서점</h3><small>AI는 편집과 검토 초안을 제안하고, 사람은 공개 여부를 결정합니다.</small></div>
                   <img src="./assets/web/works/01/001_20260930_201748.jpg" alt="어린이 작품 원본 예시" />
                 </article>
                 <article class="web-slide" data-web-slide hidden>
@@ -245,13 +245,23 @@
                 <article class="web-slide web-slide-final" data-web-slide hidden>
                   <p class="web-slide-number">04 · 구현 결과와 현장 연결</p><h3>온라인 서점을 검증하고, 키오스크로 연결합니다</h3>
                   <dl class="web-slide-metrics"><div><dt>3종 · 72쪽</dt><dd>개인정보 제외 공개본</dd></div><div><dt>33 / 33</dt><dd>자동 테스트 통과</dd></div><div><dt>Claude 응답</dt><dd>합성 비민감 문장 확인</dd></div><div><dt>공개 차단</dt><dd>개인정보 합성 시연</dd></div></dl>
-                  <div class="web-slide-kiosk-flow"><strong>승인된 작품</strong><b aria-hidden="true">→</b><strong>온라인 서점</strong><b aria-hidden="true">→</b><strong>현우 키오스크</strong></div>
-                  <div class="web-slide-improvements" aria-label="향후 개선점"><strong>개선점</strong><span>원격 권한 정책 적용</span><span>보호자 승인 이력 관리</span><span>여러 기기 실시간 동기화</span></div>
+                  <div class="web-slide-kiosk-flow"><strong>승인된 작품</strong><b aria-hidden="true">→</b><strong>온라인 서점</strong><b aria-hidden="true">→</b><strong>오프라인 키오스크</strong></div>
+                </article>
+                <article class="web-slide web-slide-limitations" data-web-slide hidden>
+                  <p class="web-slide-number">05 · 한계와 개선 계획</p><h3>현재 한계와 개선 계획</h3>
+                  <ol class="web-slide-limit-list" aria-label="현재 한계와 개선 계획 다섯 가지">
+                    <li><b>01</b><div><strong>필터링 범위</strong><small>OCR·문장 규칙 중심이라 그림과 맥락은 확인하지 못함</small></div><span>원본 육안 검토를 유지하고 비전 분석을 별도 검증</span></li>
+                    <li><b>02</b><div><strong>보호자 승인</strong><small>보호자 계정·동의·철회·승인 이력이 아직 없음</small></div><span>인증된 동의 절차와 감사 기록 구현</span></li>
+                    <li><b>03</b><div><strong>원격 권한·DB</strong><small>확장 SQL과 역할별 RLS 통합 검증이 끝나지 않음</small></div><span>migration 적용 후 익명·운영자 권한 시험</span></li>
+                    <li><b>04</b><div><strong>기기 간 동기화</strong><small>가져온 이미지와 일부 초안·댓글은 기기 안에만 저장됨</small></div><span>비공개 서버 저장과 여러 기기 동시 시험</span></li>
+                    <li><b>05</b><div><strong>실제 자료의 AI 사용</strong><small>Claude 호출은 합성 비민감 문장만 검증함</small></div><span>학교·보호자 정책 확정 후 제한적으로 활성화</span></li>
+                  </ol>
+                  <p class="web-slide-takeaway">한계가 해결되기 전에는 사람의 검토와 공개 승인을 유지합니다.</p>
                 </article>
               </div>
               <div class="web-slide-controls">
                 <button id="presentationPrevious" type="button" aria-label="이전 슬라이드">이전</button>
-                <output id="presentationSlideNumber" aria-live="polite">1 / 5</output>
+                <output id="presentationSlideNumber" aria-live="polite">1 / 6</output>
                 <button id="presentationNext" type="button" aria-label="다음 슬라이드">다음</button>
                 <button id="presentationFullscreen" type="button">전체화면 발표</button>
               </div>
