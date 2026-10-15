@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex,nofollow" />
     <title>빙고서점 · 작품 편집</title>
-    <link rel="stylesheet" href="./demo.css?v=30" />
+    <link rel="stylesheet" href="./demo.css?v=34" />
   </head>
   <body>
     <header class="demo-header">
@@ -210,59 +210,48 @@
 
         <section class="panel" data-panel="materials" hidden>
           <div class="presentation-library">
-            <header><div><strong>발표자료</strong><p>7장 · 6~7분 · 실제 구현 기준</p></div><label for="presentationFileInput">자료 선택</label></header>
+            <header><div><strong>발표자료</strong><p>5장 · 6~7분 · 실제 구현 기준</p></div><label for="presentationFileInput">자료 선택</label></header>
             <input id="presentationFileInput" class="visually-hidden" type="file" accept=".pdf,.ppt,.pptx,image/*" multiple />
             <p id="presentationStatus" role="status">선택한 자료는 이 기기에만 저장됩니다.</p>
             <section class="web-presentation" id="webPresentation" aria-label="웹 PPT 발표">
               <div class="web-slide-stage" id="webSlideStage">
                 <article class="web-slide web-slide-cover active" data-web-slide>
-                  <div><p>현우 MJ 어린이 작가 서점</p><h3>아이의 원본을 지키는<br />AI 출판 보조 서점</h3><small>원본 보존 · 선택형 AI 제안 · 사람 승인 · 온라인과 현장 연결</small></div>
+                  <div><p>현우 MJ 어린이 작가 서점</p><h3>아이의 원본을 지키는<br />AI 출판 보조 서점</h3><small>AI는 편집과 검토 초안을 제안하고, 사람은 공개 여부를 결정합니다.</small></div>
                   <img src="./assets/web/works/01/001_20260930_201748.jpg" alt="어린이 작품 원본 예시" />
                 </article>
                 <article class="web-slide" data-web-slide hidden>
-                  <p class="web-slide-number">01 · 문제와 사용자</p><h3>원본은 지키고, 출판 준비는 쉽게</h3>
-                  <div class="web-slide-split">
-                    <section><small>문제</small><strong>사진 순서·손글씨 전사·공개 검토가 여러 작업으로 흩어져 있습니다.</strong></section>
-                    <section><small>사용자</small><ul class="web-slide-role-list"><li>어린이 · 창작</li><li>보호자 · 동의</li><li>운영자 · 편집·검토</li><li>독자 · 승인본 열람</li></ul></section>
-                  </div>
-                  <p class="web-slide-takeaway">AI가 대신 쓰는 책이 아니라, 어린이의 책을 안전하게 소개하는 과정입니다.</p>
+                  <p class="web-slide-number">01 · 전체 과정</p><h3>작품 입력부터 키오스크 연결까지</h3>
+                  <ol class="web-slide-flowchart" aria-label="어린이 작품 출판 전체 순서도">
+                    <li><b>01</b><strong>작품 입력·<br />원본 보존</strong><small>카메라·앨범</small></li>
+                    <li><b>02</b><strong>편집</strong><small>OCR·회차·표지</small></li>
+                    <li><b>03</b><strong>AI 초안 제안</strong><small>요약·문장 다듬기</small></li>
+                    <li><b>04</b><strong>안전 검토</strong><small>개인정보·콘텐츠</small></li>
+                    <li><b>05</b><strong>사람 승인·<br />온라인 공개</strong><small>채택·수정·거절</small></li>
+                    <li><b>06</b><strong>키오스크 연결</strong><small>찾기·대여</small></li>
+                  </ol>
+                  <p class="web-slide-takeaway">AI가 편집·검토 후보를 제안하고, 사람의 승인 후에만 공개합니다.</p>
                 </article>
                 <article class="web-slide" data-web-slide hidden>
-                  <p class="web-slide-number">02 · 출판 흐름</p><h3>사진 한 장이 승인된 책이 되는 과정</h3>
-                  <div class="web-slide-dataflow">
-                    <section><small>기기</small><strong>가져오기·페이지 편집</strong><span>카메라·앨범 → 순서·자르기·회차·표지 지정</span></section>
-                    <b aria-hidden="true">→</b>
-                    <section><small>비공개 작업실</small><strong>대본·OCR·AI 제안</strong><span>운영자 로그인과 RLS로 초안·검토 상태 보호</span></section>
-                    <b aria-hidden="true">→</b>
-                    <section><small>공개 서점</small><strong>승인본 전체화면 읽기</strong><span>회차 목록·한 페이지 맞춤·자동 넘김 제공</span></section>
-                  </div>
-                  <p class="web-slide-takeaway">원본·비공개 초안·승인된 공개본의 접근 경로를 분리합니다.</p>
+                  <p class="web-slide-number">02 · 편집과 AI 제안</p><h3>원본을 보며 편집하고, AI 초안을 선택합니다</h3>
+                  <div class="web-slide-ai"><strong>원본 페이지</strong><span>OCR·회차·표지</span><strong>Claude 제안</strong><span>채택·수정·거절</span></div>
+                  <ul class="web-slide-principles"><li>원본은 덮어쓰지 않음</li><li>실제 아동 자료 외부 전송 차단</li><li>API 키는 서버에만 보관</li></ul>
+                  <p class="web-slide-takeaway">편집 결과는 초안이며, 원본·공개본과 분리해 보관합니다.</p>
                 </article>
                 <article class="web-slide" data-web-slide hidden>
-                  <p class="web-slide-number">03 · AI API와 안전 승인</p><h3>API는 제안하고, 최종 판단은 사람이 합니다</h3>
-                  <div class="web-slide-ai"><strong>확인 문장</strong><span>서버 키·사전 차단</span><strong>Claude 제안</strong><span>운영자 승인</span></div>
+                  <p class="web-slide-number">03 · 검토와 사람 승인</p><h3>위험 후보를 표시하고, 사람이 공개를 승인합니다</h3>
                   <ul class="web-slide-checks"><li><strong>개인정보</strong><span>실명·학교·연락처 후보</span></li><li><strong>콘텐츠</strong><span>폭력·위협 표현 후보</span></li><li><strong>저작권</strong><span>직접 만든 작품인지 확인</span></li><li><strong>보호자 동의</strong><span>승인 전 공개 차단</span></li></ul>
+                  <p class="web-slide-takeaway">후보 표시는 자동 판정이 아니며, 운영자·보호자가 원문을 확인합니다.</p>
                 </article>
-                <article class="web-slide" data-web-slide hidden>
-                  <p class="web-slide-number">04 · 실제 구현과 검증</p><h3>핵심 흐름을 작동 화면과 테스트로 확인했습니다</h3>
+                <article class="web-slide web-slide-final" data-web-slide hidden>
+                  <p class="web-slide-number">04 · 구현 결과와 현장 연결</p><h3>온라인 서점을 검증하고, 키오스크로 연결합니다</h3>
                   <dl class="web-slide-metrics"><div><dt>3종 · 72쪽</dt><dd>개인정보 제외 공개본</dd></div><div><dt>33 / 33</dt><dd>자동 테스트 통과</dd></div><div><dt>Claude 응답</dt><dd>합성 비민감 문장 확인</dd></div><div><dt>공개 차단</dt><dd>개인정보 합성 시연</dd></div></dl>
-                  <p class="web-slide-takeaway">시연: 로그인 → 이미지 가져오기 → 회차 편집 → AI 제안 → 안전 검토 → 전체화면 읽기</p>
-                </article>
-                <article class="web-slide web-slide-kiosk" data-web-slide hidden>
-                  <p class="web-slide-number">05 · 현장 키오스크 연계</p><h3>온라인에서 승인하고, 현장에서 찾고 빌립니다</h3>
-                  <div class="web-slide-kiosk-flow"><strong>승인된 작품</strong><b aria-hidden="true">→</b><strong>빙고서점 목록</strong><b aria-hidden="true">→</b><strong>현우 키오스크</strong></div>
-                  <p>PWA 캐시로 설치된 화면은 오프라인에서도 다시 열 수 있습니다. 대여·반납의 실시간 저장은 인터넷 연결 후 동기화합니다.</p>
-                  <div class="web-slide-kiosk-footer"><a href="https://koodanielmj.github.io/project_mj/" target="_blank" rel="noopener">현우 키오스크 열기</a><small>현재는 별도 프로젝트이며, 공용 데이터 동기화는 다음 검증 단계입니다.</small></div>
-                </article>
-                <article class="web-slide" data-web-slide hidden>
-                  <p class="web-slide-number">06 · 한계와 다음 단계</p><h3>완료한 기능과 운영 검증을 구분합니다</h3>
-                  <ul class="web-slide-next"><li><strong>원격 권한 검증</strong><span>확장 migration·RLS를 역할별로 다시 확인</span></li><li><strong>아동 자료 정책</strong><span>보호자 동의 전 실제 원문 외부 AI 전송 금지</span></li><li><strong>현장 연결 시험</strong><span>여러 기기 Realtime·키오스크 동기화 검증</span></li></ul>
-                  <blockquote>AI는 후보를 만들고,<br />사람이 확인하고 승인합니다.</blockquote>
+                  <div class="web-slide-kiosk-flow"><strong>승인된 작품</strong><b aria-hidden="true">→</b><strong>온라인 서점</strong><b aria-hidden="true">→</b><strong>현우 키오스크</strong></div>
+                  <div class="web-slide-improvements" aria-label="향후 개선점"><strong>개선점</strong><span>원격 권한 정책 적용</span><span>보호자 승인 이력 관리</span><span>여러 기기 실시간 동기화</span></div>
                 </article>
               </div>
               <div class="web-slide-controls">
                 <button id="presentationPrevious" type="button" aria-label="이전 슬라이드">이전</button>
-                <output id="presentationSlideNumber" aria-live="polite">1 / 7</output>
+                <output id="presentationSlideNumber" aria-live="polite">1 / 5</output>
                 <button id="presentationNext" type="button" aria-label="다음 슬라이드">다음</button>
                 <button id="presentationFullscreen" type="button">전체화면 발표</button>
               </div>
@@ -287,6 +276,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="./agent-demo.js?v=2"></script>
-    <script src="./demo.js?v=27"></script>
+    <script src="./demo.js?v=28"></script>
   </body>
 </html>

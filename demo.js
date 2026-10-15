@@ -277,6 +277,13 @@ function renderPresentationSlide(index = presentationSlideIndex) {
   $("#presentationNext").disabled = presentationSlideIndex === slides.length-1;
 }
 
+function navigatePresentationSlide(index) {
+  renderPresentationSlide(index);
+  if (document.fullscreenElement) return;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.requestAnimationFrame(() => $("#webPresentation").scrollIntoView({ behavior:reducedMotion ? "auto" : "smooth", block:"center" }));
+}
+
 async function importPresentationFiles(fileList) {
   if (!selectedWork) return;
   const allowed = /(?:pdf|powerpoint|presentation|image)/i;
@@ -1436,8 +1443,8 @@ $("#workScript").addEventListener("input",() => {
 });
 $("#collectPageTextButton").addEventListener("click",collectPageTextsIntoScript);
 $("#presentationFileInput").addEventListener("change",async (event) => { await importPresentationFiles(event.currentTarget.files); event.currentTarget.value = ""; });
-$("#presentationPrevious").addEventListener("click",() => renderPresentationSlide(presentationSlideIndex-1));
-$("#presentationNext").addEventListener("click",() => renderPresentationSlide(presentationSlideIndex+1));
+$("#presentationPrevious").addEventListener("click",() => navigatePresentationSlide(presentationSlideIndex-1));
+$("#presentationNext").addEventListener("click",() => navigatePresentationSlide(presentationSlideIndex+1));
 $("#presentationFullscreen").addEventListener("click",async () => {
   try { if (!document.fullscreenElement) await $("#webPresentation").requestFullscreen(); else await document.exitFullscreen(); }
   catch { $("#presentationStatus").textContent = "이 브라우저에서는 전체화면 발표를 열 수 없습니다."; }
@@ -1461,8 +1468,8 @@ setupReaderSwipe();
 document.addEventListener("keydown",(event) => {
   if (!selectedWork || $("#workspace").hidden || event.target.matches("input,textarea,select")) return;
   if (!document.querySelector('[data-panel="materials"]').hidden) {
-    if (event.key === "ArrowLeft") renderPresentationSlide(presentationSlideIndex-1);
-    if (event.key === "ArrowRight" || event.key === " ") renderPresentationSlide(presentationSlideIndex+1);
+    if (event.key === "ArrowLeft") navigatePresentationSlide(presentationSlideIndex-1);
+    if (event.key === "ArrowRight" || event.key === " ") navigatePresentationSlide(presentationSlideIndex+1);
     return;
   }
   if (readerMode === "single" && event.key === "ArrowLeft") showPage(selectedPage-1);

@@ -150,10 +150,12 @@ test("발표자료와 개인정보·콘텐츠 후보 검토를 기기 내에서 
   assert.match(html, /폭력·위협 표현 후보가 있습니다/);
   assert.match(js, /그림 속 장면은 자동 판정하지 않았습니다/);
   assert.match(html, /id="webPresentation"/);
-  assert.equal((html.match(/data-web-slide/g) || []).length, 7);
-  assert.match(html, /API는 제안하고, 최종 판단은 사람이 합니다/);
+  assert.equal((html.match(/data-web-slide/g) || []).length, 5);
+  ["작품 입력","원본 보존","편집","AI 초안 제안","안전 검토","사람 승인","온라인 공개","키오스크 연결"].forEach((step) => assert.match(html,new RegExp(step)));
+  assert.match(html, /위험 후보를 표시하고, 사람이 공개를 승인합니다/);
   assert.match(html, /33 \/ 33/);
-  assert.match(html, /한계와 다음 단계/);
+  assert.match(html, /구현 결과와 현장 연결/);
+  ["개선점","원격 권한 정책 적용","보호자 승인 이력 관리","여러 기기 실시간 동기화"].forEach((item) => assert.match(html,new RegExp(item)));
   assert.doesNotMatch(html, /class="kiosk-presentation-card"/);
   assert.match(js, /function renderPresentationSlide/);
   assert.match(js, /presentationFullscreen/);
