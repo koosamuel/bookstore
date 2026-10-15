@@ -1,4 +1,4 @@
 {
-  "name":"빙고서점", "short_name":"빙고서점", "lang":"ko", "start_url":"./", "scope":"./", "display":"standalone", "background_color":"#fffaf0", "theme_color":"#08765f",
+  "name":"어린이 작가 온라인 서점", "short_name":"어린이 작가 서점", "lang":"ko", "start_url":"./", "scope":"./", "display":"standalone", "background_color":"#fffaf0", "theme_color":"#08765f",
   "icons":[{"src":"./assets/school-logo.png","sizes":"192x192","type":"image/png","purpose":"any"}]
 }

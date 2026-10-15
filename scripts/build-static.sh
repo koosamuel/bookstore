@@ -10,7 +10,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-for file in index.html styles.css app.js agent-demo.js server-api.js demo.html demo.css demo.js books.json manifest.webmanifest sw.js; do
+for file in index.html styles.css app.js i18n.js agent-demo.js server-api.js demo.html demo.css demo.js books.json manifest.webmanifest sw.js; do
   cp "$PROJECT_DIR/$file" "$STAGING_DIR/$file"
 done
 

@@ -15,7 +15,8 @@ test("홈·마이 탭과 작가 별칭 선택 UI를 제공한다", () => {
   assert.match(html, /실명·학년·반 없이/);
   assert.match(html, /오프라인 키오스크/);
   assert.doesNotMatch(html, new RegExp(String.fromCodePoint(0xd604, 0xc6b0)));
-  assert.match(html, /tab=materials&amp;v=31"><span aria-hidden="true">▣<\/span> 발표자료<\/a>/);
+  assert.match(html, /tab=materials&amp;v=32"[^>]*data-preserve-language/);
+  assert.match(html, /data-i18n="nav\.presentation">발표자료<\/span>/);
 });
 
 test("전체 화면은 모바일 우선 레이아웃과 하단 탭을 기본으로 사용한다", () => {
@@ -28,13 +29,27 @@ test("전체 화면은 모바일 우선 레이아웃과 하단 탭을 기본으�
   assert.doesNotMatch(css, /@media \(max-width:760px\)/);
 });
 
-test("상단 학교 로고와 중복된 서점 제목을 표시하지 않는다", () => {
+test("상단은 기존 학교 로고 대신 새 프로그램 제목을 표시한다", () => {
   const html = read("index.html");
   assert.doesNotMatch(html, /class="brand"/);
   assert.doesNotMatch(html, /school-logo\.png/);
   assert.doesNotMatch(html, /<h1>빙고서점<\/h1>/);
   assert.doesNotMatch(html, /우리 학교 어린이 작가들의 책/);
+  assert.match(html, /class="site-title"/);
+  assert.match(html, /data-i18n="site\.title">어린이 작가 온라인 서점<\/span>/);
   assert.match(html, /id="heroBanner"/);
+});
+
+test("한국어와 영어 화면을 전환하고 선택 언어를 유지한다", () => {
+  const html = read("index.html");
+  const i18n = read("i18n.js");
+  assert.match(html, /id="languageToggle"/);
+  assert.match(html, /data-i18n="language\.button"/);
+  assert.match(i18n, /Young Authors Online Bookstore/);
+  assert.match(i18n, /bookstore-language/);
+  assert.match(i18n, /searchParams\.set\("lang", "en"\)/);
+  assert.match(read("scripts/build-static.sh"), /i18n\.js/);
+  assert.match(read("sw.js"), /i18n\.js/);
 });
 
 test("서버 API 모듈은 앱보다 먼저 로드되고 정적 배포에 포함된다", () => {
@@ -85,7 +100,7 @@ test("홈 작품은 회차 목록을 거쳐 전체화면으로 읽고, 편집 �
   const demoCss = read("demo.css");
   assert.match(html, /demo\.html\?work=0&amp;mode=reader&amp;from=home/);
   assert.match(html, /회차별로 읽기/);
-  assert.match(html, /id="myEditorTitle">작품 편집/);
+  assert.match(html, /id="myEditorTitle"[^>]*>작품 편집/);
   assert.match(html, /demo\.html\?work=0&amp;mode=edit&amp;from=my/);
   assert.ok(html.indexOf('id="myEditorTitle"') > html.indexOf('id="myDashboard"'));
   assert.match(demo, /readerOnlyMode/);
@@ -111,7 +126,8 @@ test("작품 상세의 표지를 누르면 전체화면 그림책 리더가 열�
   const app = read("app.js");
   const css = read("styles.css");
   assert.match(app, /id="detailCoverButton"/);
-  assert.match(app, /카툰 전체화면으로 읽기/);
+  assert.match(app, /tr\("book\.fullscreen_label"/);
+  assert.match(read("i18n.js"), /카툰 전체화면으로 읽기/);
   assert.match(app, /\$\("#detailCoverButton"\)\.addEventListener\("click", openReader\)/);
   assert.match(css, /\.reader-dialog \{ width:100vw;[^}]*height:100dvh/s);
   assert.match(css, /\.detail-cover-trigger \{[^}]*cursor:zoom-in/s);
@@ -136,11 +152,12 @@ test("그림책은 한 페이지 맞춤·책장 전환·자동 넘김을 제공�
 
 test("댓글은 악플·위협·개인정보를 등록 전과 서버에서 중복 점검한다", () => {
   const app = read("app.js");
+  const i18n = read("i18n.js");
   const demoHtml = read("demo.html");
   const demo = read("demo.js");
   const sql = read("supabase/engagement.sql");
-  assert.match(app, /작가나 작품을 비하하는 표현/);
-  assert.match(app, /위협하거나 해치는 표현/);
+  assert.match(i18n, /작가나 작품을 비하하는 표현/);
+  assert.match(i18n, /위협하거나 해치는 표현/);
   assert.match(app, /id="commentFilterStatus"/);
   assert.match(demoHtml, /id="publicCommentForm"/);
   assert.match(demo, /function validatePublicComment/);
@@ -154,7 +171,7 @@ test("마이 탭은 운영자 이메일과 비밀번호를 Supabase에서 검증
   const html = read("index.html");
   const app = read("app.js");
   assert.match(html, /id="loginPanel"/);
-  assert.match(html, /id="loginTitle">운영자 로그인/);
+  assert.match(html, /id="loginTitle"[^>]*>운영자 로그인/);
   assert.match(html, /id="loginEmail"[^>]*type="email"/);
   assert.match(html, /id="loginPassword"[^>]*type="password"[^>]*pattern="\[0-9\]\{6\}"/);
   assert.match(html, /id="loginCancelButton"/);

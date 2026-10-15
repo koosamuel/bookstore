@@ -251,13 +251,13 @@ test("홈 화면에는 중복 우수 작가 영역 없이 상단 우수작품 �
   assert.match(html, /id="heroFeaturedViews"/);
   assert.match(html, /👁/);
   assert.match(app, /class="ranking-view-icon" aria-hidden="true">👁<\/span>/);
-  assert.match(app, /aria-label="고유 조회 \$\{metric\.unique_views\}, 완독 \$\{metric\.completions\}"/);
-  assert.match(html, /<h2 id="demoTitle">어린이 작가 공간<\/h2>/);
+  assert.match(app, /tr\("ranking\.metric_aria", \{ views:metric\.unique_views, completions:metric\.completions \}\)/);
+  assert.match(html, /<h2 id="demoTitle"[^>]*>어린이 작가 공간<\/h2>/);
   assert.doesNotMatch(html, /ACTUAL DATA · 실제 자료 · 공개 전 검토용/);
   assert.doesNotMatch(html, /실제 작품으로 먼저 체험해 보세요/);
   assert.doesNotMatch(html, /데모 전체 보기/);
   assert.match(html, /class="demo-preview-card"/);
-  assert.match(html, /<h2 id="catalogTitle">글로 만드는 AI 그림동화<\/h2>/);
+  assert.match(html, /<h2 id="catalogTitle"[^>]*>글로 만드는 AI 그림동화<\/h2>/);
   assert.match(html, /class="section-heading catalog-heading"/);
   assert.doesNotMatch(html, /SYNTHETIC DATA · 가상 자료/);
   assert.doesNotMatch(html, /id="bookCount"/);
@@ -283,7 +283,7 @@ test("어린이 작가 배너는 이달의 우수작품 정보와 작품 열기�
   assert.match(html, /id="heroFeaturedBook"/);
   assert.match(html, /id="heroFeaturedAuthor"/);
   assert.match(html, /id="heroFeaturedViews"/);
-  assert.match(app, /\$\("#heroFeaturedBook"\)\.textContent = `이달의 우수작품/);
+  assert.match(app, /\$\("#heroFeaturedBook"\)\.textContent = tr\("book\.featured"/);
   assert.match(app, /replace\(\/\\s\*\\\(가상 페르소나\\\)\\s\*\$\//);
   assert.match(app, /heroCard\.onclick = \(\) => openBook\(book\.id\)/);
 });
