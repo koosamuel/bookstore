@@ -5,9 +5,10 @@
 ## 기준 소스와 배포
 
 - 현재 정본 소스: 이 폴더의 OpenAI Sites 연결 저장소 (`.openai/hosting.json`의 프로젝트 ID 기준)
+- 현재 GitHub Pages 배포: `https://koosamuel.github.io/bookstore/` — `koosamuel` 계정, Supabase 저장 도서 6권 조회 확인(2026-10-30)
 - 현재 Sites 배포: `https://hyunwoo-mj-bookstore.koosamuel1.chatgpt.site`
 - 현재 공개 범위: 소유자 전용. 배포 과정에서 공개 범위를 임의로 변경하지 않는다.
-- 기존 GitHub Pages 저장소·주소는 학교 현장용 이전 배포본으로 구분하며, 정본과 재동기화하기 전에는 같은 버전으로 간주하지 않는다.
+- `koosamuel/bookstore`는 공개 GitHub 배포본이다. `koodanielmj/project_mj`는 별도 계정의 이전 사이트이며 서버도 다르다. Sites와 GitHub는 배포 시점이 달라 같은 버전으로 간주하지 않는다.
 
 ## 운영 구조
 
