@@ -54,6 +54,10 @@ const PICTURE_BOOK_DEMOS = {
     captions:["파란 빗방울은 오늘 마음이 회색처럼 느껴졌어요.","노란 친구는 기쁨이 아침 햇살처럼 빛난다고 알려 주었어요.","빨강과 파랑 친구는 화와 슬픔도 숨기지 않아도 된다고 했어요.","초록과 주황 친구와 천천히 숨 쉬자 마음의 색이 움직였어요.","프리즘을 통과한 첫 무지개는 작고 조금 삐뚤었어요.","색깔 친구들이 손을 잡자 마음속 모든 감정이 함께 빛났어요.","빗방울은 어떤 감정도 소중하다는 것을 알게 되었답니다."]
   }
 };
+function pictureBookDemoFor(bookOrId) {
+  const book = typeof bookOrId === "string" ? books.find((item) => item.id === bookOrId) : bookOrId;
+  return book && isSynthetic(book) ? PICTURE_BOOK_DEMOS[book.id] : null;
+}
 let pictureBookPage = 0;
 let activePictureBookId = "B002";
 let pictureBookAutoPlay = false;
@@ -209,8 +213,8 @@ async function loadBooks() {
     return;
   }
   books = data.map((book) => {
-    const demo = PICTURE_BOOK_DEMOS[book.id];
-    return demo ? {...book, title:demo.title, author:demo.author, description:demo.description, cover_url:`./assets/web/synthetic/${demo.slug}/cover.jpg`, grade:demo.grade, data_origin:"synthetic"} : book;
+    const demo = isSynthetic(book) ? PICTURE_BOOK_DEMOS[book.id] : null;
+    return window.BingoServerApi.normalizeBook(book, demo);
   }).sort((a, b) => bookSortNumber(a.id) - bookSortNumber(b.id) || a.id.localeCompare(b.id, "ko"));
   await loadEngagement();
   if (session) await refreshAuthorDashboard();
@@ -220,8 +224,8 @@ async function loadBooks() {
 
 function coverMarkup(book, className = "cover") {
   const image = book.cover_url ? `<img src="${escapeHtml(book.cover_url)}" alt="${escapeHtml(tr("book.cover_alt", { title:book.title }))}" />` : escapeHtml(book.emoji || "📖");
-  const title = PICTURE_BOOK_DEMOS[book.id] ? `<span class="cover-title">${escapeHtml(book.title)}</span>` : "";
-  if (className === "detail-cover" && PICTURE_BOOK_DEMOS[book.id]) {
+  const title = pictureBookDemoFor(book) ? `<span class="cover-title">${escapeHtml(book.title)}</span>` : "";
+  if (className === "detail-cover" && pictureBookDemoFor(book)) {
     return `<button class="${className} detail-cover-trigger" id="detailCoverButton" type="button" style="--cover:${escapeHtml(book.color || "#e8f5ef")}" aria-label="${escapeHtml(tr("book.fullscreen_label", { title:book.title }))}">${image}${title}<span class="detail-cover-hint">${tr("book.open_picture")}</span></button>`;
   }
   return `<div class="${className}" style="--cover:${escapeHtml(book.color || "#e8f5ef")}">${image}${title}</div>`;
@@ -257,13 +261,13 @@ function openBook(id) {
     <h2>${escapeHtml(book.title)}</h2><p class="author">${escapeHtml(book.author)}</p><p class="detail-description">${escapeHtml(book.description)}</p>
     <div class="detail-meta"><div><small>${tr("book.number")}</small><strong>${escapeHtml(book.id)}</strong></div><div><small>${tr("book.grade")}</small><strong>${escapeHtml(book.grade)}</strong></div></div>
     ${engagementPanelMarkup(id)}
-    ${PICTURE_BOOK_DEMOS[id] ? `<button class="picture-book-button" id="pictureBookButton" type="button">${tr("book.demo")}</button>` : ""}
+    ${pictureBookDemoFor(id) ? `<button class="picture-book-button" id="pictureBookButton" type="button">${tr("book.demo")}</button>` : ""}
     <button class="primary-button" id="borrowButton" type="button" ${borrowed || !session ? "disabled" : ""}>${actionLabel}</button>
   </div></article>`;
   $("#bookDialog").showModal();
   $("#bookDialogContent [data-close]").addEventListener("click", () => $("#bookDialog").close());
   bindCommentForm(id);
-  if (PICTURE_BOOK_DEMOS[id]) {
+  if (pictureBookDemoFor(id)) {
     const openReader = () => openPictureBook(id, 0);
     $("#detailCoverButton").addEventListener("click", openReader);
     $("#pictureBookButton").addEventListener("click", openReader);
@@ -280,14 +284,14 @@ function stopPictureBookAutoPlay() {
 
 function schedulePictureBookAutoPlay() {
   window.clearTimeout(pictureBookAutoTimer);
-  const demo = PICTURE_BOOK_DEMOS[activePictureBookId];
+  const demo = pictureBookDemoFor(activePictureBookId);
   if (!pictureBookAutoPlay || !demo || pictureBookPage >= demo.captions.length - 1) return;
   pictureBookAutoTimer = window.setTimeout(() => openPictureBook(activePictureBookId, pictureBookPage + 1, "next"), 5000);
 }
 
 function openPictureBook(bookId, pageIndex, direction = "next") {
   activePictureBookId = bookId || activePictureBookId;
-  const demo = PICTURE_BOOK_DEMOS[activePictureBookId];
+  const demo = pictureBookDemoFor(activePictureBookId);
   if (!demo) return;
   pictureBookPage = Math.max(0, Math.min(pageIndex, demo.captions.length - 1));
   const caption = demo.captions[pictureBookPage];

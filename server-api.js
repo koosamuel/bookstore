@@ -58,6 +58,20 @@
     };
   }
 
+  // Server fields are authoritative; demos only fill missing presentation fields.
+  function normalizeBook(record, demo) {
+    const book = { ...record };
+    if (!demo || book.data_origin === "actual") return book;
+    const defaults = {
+      title: demo.title, author: demo.author, description: demo.description,
+      grade: demo.grade, cover_url: `./assets/web/synthetic/${demo.slug}/cover.jpg`,
+    };
+    for (const [field, fallback] of Object.entries(defaults)) {
+      if (book[field] == null || book[field] === "") book[field] = fallback;
+    }
+    return book;
+  }
+
   function create(client) {
     if (!client?.rpc) throw new Error("Supabase client is required");
     return {
@@ -82,5 +96,5 @@
     };
   }
 
-  return { create, missingFunction, normalizeHomeFeed, normalizeAuthorDashboard };
+  return { create, missingFunction, normalizeBook, normalizeHomeFeed, normalizeAuthorDashboard };
 });
